@@ -1,39 +1,47 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-
 #include "lwt.h"
 #include "lwt_dispatch.h"
 
-
 /* Global variable */
-int lwt_counter;
+int lwt_counter = 0;
 int thread_initiated = 0;
-linked_list * thread_queue = NULL;
-lwt_t * current_thread = NULL;
+
+lwt_context schedule_context;
+linked_list thread_queue;
+lwt_t * current_thread;
+
+
+/** extern function declaration */
+void __lwt_schedule (void);
+lwt_t *  __get_next_thread ();
+int __add_thread_to_list (lwt_t ** thread);
+int __delete_thread_to_list (lwt_t * thread, linked_list * list);
+static void __initiate(void);
 
 int
-__add_thread_to_list (lwt_t * thread, linked_list * list)
+__add_thread_to_list (lwt_t ** thread)
 {
-    linked_list_node * node = (linked_list_node *) malloc (sizeof (linked_list_node));
-    node->data = thread;
-    node->next = NULL;
-	node->prev = NULL;
     
-    if (!list->node_count)
+    linked_list_node * node = (linked_list_node *) malloc (sizeof (linked_list_node));
+    node->data = *thread;
+    node->next = NULL;
+    
+    if (!thread_queue.node_count)
     {
-        list->head = node;
-        list->tail = node;
+        thread_queue.head = node;
+        thread_queue.tail = node;
     }
     else
     {
-        list->tail->next = node;
-        node->prev = list->tail;
-        list->tail = node;
+        thread_queue.tail->next = node;
+        node->prev = thread_queue.tail;
+        thread_queue.tail = node;
     }
     
-    ++ list->node_count;
-    return list->node_count - 1;
+    ++ thread_queue.node_count;
+    return thread_queue.node_count - 1;
 }
 
 int
@@ -47,6 +55,7 @@ __delete_thread_to_list (lwt_t * thread, linked_list * list)
         {
             curr->prev->next = curr->next;
             curr->next->prev = curr->prev;
+            /* Free or not? */
             free(curr);
             return 1;
         }
@@ -54,44 +63,98 @@ __delete_thread_to_list (lwt_t * thread, linked_list * list)
     return 0;
 }
 
-lwt_t*
-__get_next_thread (lwt_t * p_thread, linked_list * list)
+lwt_t *
+__get_next_thread ()
 {
-    linked_list_node * curr = list->tail;
+    linked_list_node * curr = thread_queue.tail;
     // TODO scheduling
-    p_thread = curr->data;
-    return p_thread;
+    while (curr)
+    {
+        if (curr->data->status == LWT_INFO_NTHD_RUNNABLE){
+            return curr->data;
+        }
+        curr = curr->prev;
+    }
+    return NULL;
 }
 
+void
+__lwt_schedule ()
+{
+    while (1)
+    {
+        current_thread = __get_next_thread(&thread_queue);
+        if (current_thread)
+            __lwt_dispatch(&schedule_context, &current_thread->context);
+    }
+}
 
 static void
 __initiate()
 {
     thread_initiated = 1;
-    thread_queue = (linked_list * ) malloc (sizeof(linked_list));
+    
+    /* Add main thread to TCB */
     current_thread = (lwt_t * ) malloc (sizeof(lwt_t));
-    __add_thread_to_list(current_thread, thread_queue);
-	printf("thread main created\n");
-    return;
+    current_thread->lwt_id = lwt_counter ++;
+    current_thread->status = LWT_INFO_NTHD_RUNNABLE;
+    
+    /* Add to TCB */
+    __add_thread_to_list(&current_thread);
+    
+    /* Initiate schedule_context */
+    uint _sp = (uint) malloc(MAX_STACK_SIZE);
+    _sp += (MAX_STACK_SIZE - sizeof(uint));
+    *((uint *)_sp) = (uint)__lwt_schedule;
+    schedule_context.sp = _sp;
+    schedule_context.ip = (uint) __lwt_schedule;
+
 }
 
 lwt_t *
-lwt_create(lwt_fn_t fn, void * data, lwt_t * origin_thread)
+lwt_create(lwt_fn_t fn, void * data)
 {
     if(!thread_initiated) __initiate();
+    lwt_t * next_thread = (lwt_t *) malloc (sizeof(lwt_t));
+    
+    /* Return lwt_die */
+    uint _sp = (uint) malloc(MAX_STACK_SIZE);
+    _sp += (MAX_STACK_SIZE - sizeof(uint));
+    *((uint *)_sp) = (uint)NULL;
+    _sp -= (sizeof(uint));
+    *((uint *)_sp) = (uint)lwt_die;
+    
+    
+    
+    /* Construct new thread */
+    next_thread->lwt_id = lwt_counter ++;
+    next_thread->status = LWT_INFO_NTHD_RUNNABLE;
+    next_thread->context.sp = _sp;
+    next_thread->context.ip = (uint) fn;
+    
+    
+    __add_thread_to_list(&next_thread);
+    
+    __lwt_dispatch(&current_thread->context, &schedule_context);
+    
+    return next_thread;
+}
 
-	/* create next thread */
-    lwt_t * created_thread = (lwt_t *) malloc(sizeof(lwt_t));
-	origin_thread=current_thread;
-
-    created_thread->context.sp = (uint) malloc(1000);
-    created_thread->context.ip = (uint) fn;
-
-	created_thread->lwt_id=++lwt_counter;
-	__add_thread_to_list(created_thread, thread_queue);
-
-    printf("create function returned\n");
-	printf("original Thread is %d, created thread is %d\n", origin_thread->lwt_id,created_thread->lwt_id);
-
-    return created_thread;
+void
+lwt_die(void * p_thread)
+{
+    if (!p_thread)
+    {
+        /* lwt_die(NULL) */
+        current_thread->status = LWT_INFO_NTHD_ZOMBIES;
+        
+    }
+    else
+    {
+        /* TODO kill specialfic thread */
+    }
+    
+    //thread_queue.node_count --;
+    
+    __lwt_schedule();
 }

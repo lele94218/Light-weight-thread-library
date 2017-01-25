@@ -4,6 +4,10 @@
 /* */
 #include "lwt_dispatch.h"
 
+#define MAX_STACK_SIZE 4096
+
+
+
 /* Data redefinition */
 typedef unsigned int uint;
 typedef unsigned short ushort;
@@ -30,21 +34,18 @@ typedef enum _lwt_info_t
 }
 lwt_info_t;
 
-/* The structure describes a LWT thread. */
-
+/* This structure describes a LWT thread. */
 typedef struct _lwt_t
 {
     /* Thread id */
     t_id lwt_id;
-
-	/* Thread status */    
+    
     lwt_info_t status;
     
     /* Thread context */
-	lwt_context context;
+    lwt_context context;
 }
 lwt_t;
-
 
 /* LinkedListNode definiation */
 typedef struct _linked_list_node
@@ -65,14 +66,19 @@ linked_list;
 
 
 /* Funciton declaration */
-lwt_t * lwt_create(lwt_fn_t fn, void * data, lwt_t * origin_thread);
+lwt_t * lwt_create(lwt_fn_t fn, void * data);
 //void * lwt_join(lwt_t);
-//void lwt_die(void *);
+void lwt_die(void *);
 //int lwt_yield(lwt_t);
 //lwt_t lwt_current(void);
 //int lwt_id(lwt_t);
 //int lwt_info(lwt_info_t t);
 
+
+
+extern lwt_context schedule_context;
+extern linked_list thread_queue;
+extern lwt_t * current_thread;
 
 
 #endif
