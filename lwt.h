@@ -36,11 +36,12 @@ typedef struct _lwt_t
 {
     /* Thread id */
     t_id lwt_id;
-    
-    lwt_info_t * status;
+
+	/* Thread status */    
+    lwt_info_t status;
     
     /* Thread context */
-	struct lwt_context context;
+	lwt_context context;
 }
 lwt_t;
 

@@ -69,7 +69,6 @@ __initiate()
     thread_initiated = 1;
     thread_queue = (linked_list * ) malloc (sizeof(linked_list));
     current_thread = (lwt_t * ) malloc (sizeof(lwt_t));
-
     __add_thread_to_list(current_thread, thread_queue);
 	printf("thread main created\n");
     return;
@@ -82,14 +81,13 @@ lwt_create(lwt_fn_t fn, void * data, lwt_t * origin_thread)
 
 	/* create next thread */
     lwt_t * created_thread = (lwt_t *) malloc(sizeof(lwt_t));
+	origin_thread=current_thread;
 
     created_thread->context.sp = (uint) malloc(1000);
     created_thread->context.ip = (uint) fn;
-    origin_thread=current_thread;
+
 	created_thread->lwt_id=++lwt_counter;
-
-
-    __add_thread_to_list(created_thread, thread_queue);
+	__add_thread_to_list(created_thread, thread_queue);
 
     printf("create function returned\n");
 	printf("original Thread is %d, created thread is %d\n", origin_thread->lwt_id,created_thread->lwt_id);
