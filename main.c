@@ -13,6 +13,8 @@ void fun2();
 void fun()
 {
     printf("fun() \n");
+    lwt_yield(NULL);
+    printf("after fun \n");
 }
 
 void fun1()
@@ -31,7 +33,5 @@ int main()
     lwt_t * t2 = lwt_create((void *) fun1, NULL);
     lwt_yield(NULL);
     lwt_t * t3 = lwt_create((void *) fun2, NULL);
-    lwt_yield(NULL);
-    lwt_yield(t1);
     printf("main finishing...\n");
 }

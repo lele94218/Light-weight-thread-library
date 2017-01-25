@@ -45,6 +45,27 @@ __add_thread_to_list (lwt_t ** thread)
 }
 
 int
+__add_thread_to_list_head (lwt_t ** thread)
+{
+    linked_list_node * node = (linked_list_node *)malloc(sizeof(linked_list_node));
+    node->data= *thread;
+    node->prev= NULL;
+    if (!thread_queue.node_count)
+    {
+        thread_queue.head = node;
+        thread_queue.tail = node;
+    }
+    else
+    {
+        thread_queue.head->prev = node;
+        node->next=thread_queue.head;
+        thread_queue.head= node;
+    }
+    ++ thread_queue.node_count;
+    return thread_queue.node_count - 1;
+}
+
+int
 __delete_thread_to_list (lwt_t * thread, linked_list * list)
 {
     linked_list_node * curr = list->head;
@@ -147,15 +168,18 @@ lwt_yield(lwt_t* lwt)
     {
         printf("goto specified thread \n");
         lwt_t* current = current_thread;
-        __add_thread_to_list(&current_thread);
+        __add_thread_to_list_head(&current_thread);
         __lwt_dispatch(&current->context, &lwt->context);
     }
     else
     {
         printf("resched \n");
         lwt_t* current = current_thread;
-        __add_thread_to_list(&current_thread);
-        __lwt_dispatch(&current->context, &schedule_context);
+        __add_thread_to_list_head(&current_thread);
+        current_thread = __get_next_thread();
+        __lwt_dispatch(&current->context, &current_thread->context);
+//        __lwt_dispatch(&current->context, &schedule_context);
+//        __lwt_schedule();
     }
     return 0;
 }
