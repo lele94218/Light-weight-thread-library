@@ -140,6 +140,26 @@ lwt_create(lwt_fn_t fn, void * data)
     return next_thread;
 }
 
+int
+lwt_yield(lwt_t* lwt)
+{
+    if (lwt)
+    {
+        printf("goto specified thread \n");
+        lwt_t* current = current_thread;
+        __add_thread_to_list(&current_thread);
+        __lwt_dispatch(&current->context, &lwt->context);
+    }
+    else
+    {
+        printf("resched \n");
+        lwt_t* current = current_thread;
+        __add_thread_to_list(&current_thread);
+        __lwt_dispatch(&current->context, &schedule_context);
+    }
+    return 0;
+}
+
 void
 lwt_die(void * p_thread)
 {
