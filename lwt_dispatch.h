@@ -2,7 +2,7 @@
 #define LWT_DISPATCH_H
 
 struct lwt_context {
-	unsigned long ip, sp;
+	unsigned int ip, sp;
 };
 
 void __lwt_dispatch(struct lwt_context *curr, struct lwt_context *next);
