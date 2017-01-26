@@ -153,60 +153,13 @@ __initiate()
     
 }
 
-lwt_t * __reuse_thread(lwt_fn_t fn, void * data)
-{
-    lwt_t * reused_thread=thread_queue.head;
-    reused_thread->lwt_id = lwt_counter ++;
-    reused_thread->status = LWT_INFO_NTHD_RUNNABLE;
-    reused_thread->next=NULL;
-    reused_thread->prev=NULL;
-    reused_thread->unlock=NULL;
-    reused_thread->waiting_for=NULL;
-    reused_thread->last_word=NULL;
-    printf("create thread %d from recycle\n", reused_thread->lwt_id);
-    uint _sp=reused_thread->init_sp;
-    _sp += (MAX_STACK_SIZE - sizeof(uint));
-    *((uint *)_sp) = (uint)data;
-    _sp -= (sizeof(uint));
-    *((uint *)_sp) = (uint)__lwt_trampoline;
-    reused_thread->context.sp = _sp;
-    reused_thread->context.ip = (uint) fn;
-    
-    return reused_thread;
-}
-
-lwt_t * __create_thread(int with_stack, lwt_fn_t fn, void * data)
-{
-    lwt_t * created_thread=(lwt_t * ) malloc (sizeof(lwt_t));
-    created_thread->lwt_id = lwt_counter ++;
-    created_thread->status = LWT_INFO_NTHD_RUNNABLE;
-    created_thread->next=NULL;
-    created_thread->prev=NULL;
-    created_thread->unlock=NULL;
-    created_thread->waiting_for=NULL;
-    created_thread->last_word=NULL;
-    if (with_stack)
-    {
-        /* init stack with die function */
-        uint _sp = (uint) malloc(MAX_STACK_SIZE);
-        created_thread->init_sp=_sp;
-        _sp += (MAX_STACK_SIZE - sizeof(uint));
-        *((uint *)_sp) = (uint)data;
-        _sp -= (sizeof(uint));
-        *((uint *)_sp) = (uint)__lwt_trampoline;
-        created_thread->context.sp = _sp;
-        created_thread->context.ip = (uint) fn;
-    }
-    printf("create thread %d complete\n", created_thread->lwt_id);
-    return created_thread;
-}
 
 lwt_t *
 lwt_create(lwt_fn_t fn, void * data)
 {
     if(!thread_initiated) __initiate();
-    lwt_t * next_thread = (lwt_t *) malloc (sizeof(lwt_t));
-//    next_thread=thread_queue.node_count? (lwt_t *) malloc (sizeof(lwt_t)) :zombie_pool.head;
+//    lwt_t * next_thread = (lwt_t *) malloc (sizeof(lwt_t));
+    lwt_t * next_thread=zombie_pool.node_count? zombie_pool.head:(lwt_t *) malloc (sizeof(lwt_t));
     
     /* Return lwt_die */
 //    uint _sp = (uint) malloc(MAX_STACK_SIZE);
