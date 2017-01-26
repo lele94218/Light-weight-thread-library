@@ -46,11 +46,15 @@ typedef struct _lwt_t
 	struct _lwt_t * next;
 	struct _lwt_t * prev;
 
-	/* thread it can unlock */
+	/* thread regarding join and wait */
 	struct _lwt_t * unlock;
+	struct _lwt_t * waiting_for;
 	
 	/* initial stack pointer */
 	unsigned int init_sp;
+
+	/* return value */
+	void * last_word;
     
     /* Thread context */
     lwt_context context;
@@ -69,10 +73,11 @@ linked_list;
 /* Funciton declaration */
 lwt_t * lwt_create(lwt_fn_t fn, void * data);
 void * lwt_join(lwt_t * thread_to_wait);
-void lwt_die();
+void lwt_die(void *);
 int lwt_yield(lwt_t * strong_thread);
 lwt_t * lwt_current();
 int lwt_id(lwt_t * input_thread);
+lwt_t * lwt_current();
 
 //int lwt_info(lwt_info_t t);
 

@@ -6,55 +6,34 @@
 #include "lwt.h"
 #include "lwt_dispatch.h"
 
-void fun();
-void fun1();
-void fun2();
+int fun(int argument);
+int fun2();
 
-void fun()
+lwt_t * t0;
+lwt_t * t1;
+lwt_t * t2;
+int fun(int argument)
 {
-    printf("fun() start executing\n");
-    printf("fun() \n");
-    lwt_yield(NULL);
-    lwt_yield(NULL);
-    lwt_yield(NULL);
-    printf("fun() stop executing\n");
-}
-
-void fun1()
-{
-    printf("fun1() start executing\n");
-	lwt_t * current_executing=lwt_current();
-    printf("currently thread %d is running\n", lwt_id(current_executing));
 	lwt_yield(NULL);
-    lwt_yield(NULL);
-    lwt_yield(NULL);
-    lwt_yield(NULL);
-    printf("fun1() stop executing\n");
+	printf("fun has been executed by thread %d with input arg %d\n", lwt_id(lwt_current()),argument);
+	argument+=1;
+	return argument;
 }
 
-void fun2()
+int fun2()
 {
-    printf("fun2() \n");
-	lwt_t * t1 = lwt_create((void *) fun1, NULL);
-    lwt_yield(NULL);
-    lwt_yield(NULL);
-    lwt_yield(NULL);
-    printf("fun2() stop executing\n");
+	int t1_last_word=(int)lwt_join(t1);
+	printf("thread %d woke up, get the last word %d from its waker\n",lwt_id(lwt_current()),t1_last_word);
 }
 
 int main()
 {
-    lwt_t * t1 = lwt_create((void *) fun, NULL);
-    lwt_t * t2 = lwt_create((void *) fun1, NULL);
-
-    lwt_t * t3 = lwt_create((void *) fun2, NULL);
-	lwt_join(t1);
-	lwt_join(t2);
-	lwt_join(t3);
-	t1 = lwt_create((void *) fun, NULL);
-	lwt_yield(t1);
-	lwt_yield(t1);
-	lwt_yield(t1);
+    t1 = lwt_create((void *) fun, (void *)12345);
+	t0 = lwt_current();
+	t2 = lwt_create((void *) fun2, NULL);
+    int t1_last_word=(int)lwt_join(t1);
+	printf("main thread woke up, get the last word %d from its waker\n",t1_last_word);
+	t1 = lwt_create((void *) fun, (void *)12345);
     printf("main finishing, following threads still active:\n");
 	print_living_thread_info();
 	return 0;
