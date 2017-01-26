@@ -184,7 +184,10 @@ lwt_create(lwt_fn_t fn, void * data)
 int
 lwt_yield(lwt_t * lwt)
 {
+    __remove_from_list(current_thread, &thread_queue);
+    __add_thread_to_list_tail(current_thread, &thread_queue);
     
+
     if (lwt)
     {
         printf("goto specified thread \n");
@@ -194,13 +197,9 @@ lwt_yield(lwt_t * lwt)
     else
     {
         printf("resched \n");
-        __add_thread_to_list_tail(current_thread, &thread_queue);
     }
     
-    __remove_from_list(current_thread, &thread_queue);
-    __add_thread_to_list_tail(current_thread, &thread_queue);
-    
-    __lwt_dispatch(&current_thread->context, &schedule_context);
+        __lwt_dispatch(&current_thread->context, &schedule_context);
     return 0;
 }
 
