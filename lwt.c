@@ -22,31 +22,28 @@ void __lwt_schedule (void);
 lwt_t *  __get_next_thread ();
 int __add_thread_to_list_tail (lwt_t *, linked_list *);
 int __add_thread_to_list_head (lwt_t *, linked_list *);
-int __move_thread_to_head(lwt_t *);
-int __move_thread_to_tail(lwt_t *);
-void __remove_from_list(lwt_t *);
+void __remove_from_list(lwt_t *, linked_list *);
 
 static void __initiate(void);
-int __move_thread_to_pool (lwt_t *);
+int __move_thread_to_pool (lwt_t *, linked_list *, linked_list *);
 
 /* Function implemetion */
 
-void __remove_from_list(lwt_t * p_thread)
+void __remove_from_list(lwt_t * p_thread, linked_list * list)
 {
     if (!p_thread) return;
     
-    p_thread->status = LWT_INFO_NTHD_ZOMBIES;
     
     /* Remove from run queue */
-    if (p_thread == thread_queue.head)
+    if (p_thread == list->head)
     {
         p_thread->next->prev = NULL;
-        thread_queue.head = p_thread->next;
+        list->head = p_thread->next;
     }
     else if (p_thread == thread_queue.tail)
     {
         p_thread->prev->next = NULL;
-        thread_queue.tail = p_thread->prev;
+        list->tail = p_thread->prev;
     }
     else
     {
@@ -57,14 +54,14 @@ void __remove_from_list(lwt_t * p_thread)
     thread_queue.node_count --;
 }
 
-int __move_thread_to_pool (lwt_t * p_thread)
+int __move_thread_to_pool (lwt_t * p_thread, linked_list * run_list, linked_list * zombie_list)
 {
-    __remove_from_list(p_thread);
+    __remove_from_list(p_thread, run_list);
     
     /* Refresh */
     
     /* Move to pool */
-    return __add_thread_to_list_tail(p_thread, &zombie_pool);
+    return __add_thread_to_list_tail(p_thread, zombie_list);
 }
 
 int
@@ -187,18 +184,21 @@ lwt_create(lwt_fn_t fn, void * data)
 int
 lwt_yield(lwt_t * lwt)
 {
-    __remove_from_list(current_thread);
     
     if (lwt)
     {
         printf("goto specified thread \n");
-        __add_thread_to_list_head(current_thread, &thread_queue);
+        __remove_from_list(lwt, &thread_queue);
+        __add_thread_to_list_head(lwt, &thread_queue);
     }
     else
     {
         printf("resched \n");
         __add_thread_to_list_tail(current_thread, &thread_queue);
     }
+    
+    __remove_from_list(current_thread, &thread_queue);
+    __add_thread_to_list_tail(current_thread, &thread_queue);
     
     __lwt_dispatch(&current_thread->context, &schedule_context);
     return 0;
