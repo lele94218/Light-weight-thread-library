@@ -4,7 +4,7 @@
 /* */
 #include "lwt_dispatch.h"
 
-#define MAX_STACK_SIZE 4096
+#define MAX_STACK_SIZE 2097152
 
 
 
@@ -41,25 +41,26 @@ typedef struct _lwt_t
     t_id lwt_id;
     
     lwt_info_t status;
+
+	/* previous and next thread in list */
+	struct _lwt_t * next;
+	struct _lwt_t * prev;
+
+	/* thread it can unlock */
+	struct _lwt_t * unlock;
+	
+	/* initial stack pointer */
+	unsigned int init_sp;
     
     /* Thread context */
     lwt_context context;
 }
 lwt_t;
 
-/* LinkedListNode definiation */
-typedef struct _linked_list_node
-{
-    lwt_t * data;
-    struct _linked_list_node * next;
-    struct _linked_list_node * prev;
-}
-linked_list_node;
-
 /* LinkedList definiation */
 typedef struct _linked_list
 {
-    linked_list_node *head, *tail;
+    lwt_t *head, *tail;
     int node_count;
 }
 linked_list;
@@ -67,18 +68,18 @@ linked_list;
 
 /* Funciton declaration */
 lwt_t * lwt_create(lwt_fn_t fn, void * data);
-//void * lwt_join(lwt_t);
-void lwt_die(void *);
-//int lwt_yield(lwt_t);
-//lwt_t lwt_current(void);
-//int lwt_id(lwt_t);
+void * lwt_join(lwt_t * thread_to_wait);
+void lwt_die();
+int lwt_yield(lwt_t * strong_thread);
+lwt_t * lwt_current();
+int lwt_id(lwt_t * input_thread);
+
 //int lwt_info(lwt_info_t t);
 
 
+/* test function declaration */
+void print_living_thread_info();
 
-extern lwt_context schedule_context;
-extern linked_list thread_queue;
-extern lwt_t * current_thread;
 
 
 #endif
