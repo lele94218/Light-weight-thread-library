@@ -45,8 +45,17 @@ typedef struct _lwt_t
     /* Thread context */
     lwt_context context;
     
+    /* thread regarding join and wait */
+    struct _lwt_t * unlock;
+    struct _lwt_t * waiting_for;
+    
+    /* return value */
+    void * last_word;
+    
     struct _lwt_t * prev;
     struct _lwt_t * next;
+    
+    unsigned int init_sp;
 }
 lwt_t;
 
@@ -77,8 +86,6 @@ extern lwt_t * current_thread;
 
 
 #endif
-
-
 
 
 
