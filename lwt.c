@@ -87,14 +87,14 @@ __delete_thread_to_list (lwt_t * thread, linked_list * list)
 lwt_t *
 __get_next_thread ()
 {
-    linked_list_node * curr = thread_queue.tail;
+    linked_list_node * curr = thread_queue.head;
     // TODO scheduling
     while (curr)
     {
         if (curr->data->status == LWT_INFO_NTHD_RUNNABLE){
             return curr->data;
         }
-        curr = curr->prev;
+        curr = curr->next;
     }
     return NULL;
 }
