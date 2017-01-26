@@ -22,13 +22,19 @@ void __lwt_schedule (void);
 lwt_t *  __get_next_thread ();
 int __add_thread_to_list_tail (lwt_t *, linked_list *);
 int __add_thread_to_list_head (lwt_t *, linked_list *);
+int __move_thread_to_head(lwt_t *);
+int __move_thread_to_tail(lwt_t *);
+void __remove_from_list(lwt_t *);
+
 static void __initiate(void);
 int __move_thread_to_pool (lwt_t *);
 
-int __move_thread_to_pool (lwt_t * p_thread)
+/* Function implemetion */
+
+void __remove_from_list(lwt_t * p_thread)
 {
-    if (!p_thread) return 0;
-        
+    if (!p_thread) return;
+    
     p_thread->status = LWT_INFO_NTHD_ZOMBIES;
     
     /* Remove from run queue */
@@ -49,6 +55,11 @@ int __move_thread_to_pool (lwt_t * p_thread)
     }
     
     thread_queue.node_count --;
+}
+
+int __move_thread_to_pool (lwt_t * p_thread)
+{
+    __remove_from_list(p_thread);
     
     /* Refresh */
     
@@ -174,25 +185,22 @@ lwt_create(lwt_fn_t fn, void * data)
 }
 
 int
-lwt_yield(lwt_t* lwt)
+lwt_yield(lwt_t * lwt)
 {
+    __remove_from_list(current_thread);
+    
     if (lwt)
     {
         printf("goto specified thread \n");
-        lwt_t* current = current_thread;
-//        __add_thread_to_list_head(current_thread);
-        __lwt_dispatch(&current->context, &lwt->context);
+        __add_thread_to_list_head(current_thread, &thread_queue);
     }
     else
     {
         printf("resched \n");
-        lwt_t* current = current_thread;
-        __add_thread_to_list_head(current_thread, &thread_queue);
-//        current_thread = __get_next_thread();
-        __lwt_dispatch(&current->context, &current_thread->context);
-//        __lwt_dispatch(&current->context, &schedule_context);
-//        __lwt_schedule();
+        __add_thread_to_list_tail(current_thread, &thread_queue);
     }
+    
+    __lwt_dispatch(&current_thread->context, &schedule_context);
     return 0;
 }
 
