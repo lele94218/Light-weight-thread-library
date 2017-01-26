@@ -4,7 +4,7 @@
 /* */
 #include "lwt_dispatch.h"
 
-#define MAX_STACK_SIZE 4096
+#define MAX_STACK_SIZE (100 * 1024 * 4)
 
 
 
@@ -44,22 +44,17 @@ typedef struct _lwt_t
     
     /* Thread context */
     lwt_context context;
+    
+    struct _lwt_t * prev;
+    struct _lwt_t * next;
 }
 lwt_t;
 
-/* LinkedListNode definiation */
-typedef struct _linked_list_node
-{
-    lwt_t * data;
-    struct _linked_list_node * next;
-    struct _linked_list_node * prev;
-}
-linked_list_node;
 
 /* LinkedList definiation */
 typedef struct _linked_list
 {
-    linked_list_node *head, *tail;
+    lwt_t * head, * tail;
     int node_count;
 }
 linked_list;

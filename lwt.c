@@ -9,90 +9,102 @@ int lwt_counter = 0;
 int thread_initiated = 0;
 
 lwt_context schedule_context;
+/* Run queue */
 linked_list thread_queue;
 lwt_t * current_thread;
 
 
-/** extern function declaration */
+/* Zombie pool */
+linked_list zombie_pool;
+
+/* Extern function declaration */
 void __lwt_schedule (void);
 lwt_t *  __get_next_thread ();
-int __add_thread_to_list (lwt_t ** thread);
-int __delete_thread_to_list (lwt_t * thread, linked_list * list);
+int __add_thread_to_list_tail (lwt_t *, linked_list *);
+int __add_thread_to_list_head (lwt_t *, linked_list *);
 static void __initiate(void);
+int __move_thread_to_pool (lwt_t *);
 
-int
-__add_thread_to_list (lwt_t ** thread)
+int __move_thread_to_pool (lwt_t * p_thread)
 {
+    if (!p_thread) return 0;
+        
+    p_thread->status = LWT_INFO_NTHD_ZOMBIES;
     
-    linked_list_node * node = (linked_list_node *) malloc (sizeof (linked_list_node));
-    node->data = *thread;
-    node->next = NULL;
-    
-    if (!thread_queue.node_count)
+    /* Remove from run queue */
+    if (p_thread == thread_queue.head)
     {
-        thread_queue.head = node;
-        thread_queue.tail = node;
+        p_thread->next->prev = NULL;
+        thread_queue.head = p_thread->next;
+    }
+    else if (p_thread == thread_queue.tail)
+    {
+        p_thread->prev->next = NULL;
+        thread_queue.tail = p_thread->prev;
     }
     else
     {
-        thread_queue.tail->next = node;
-        node->prev = thread_queue.tail;
-        thread_queue.tail = node;
+        p_thread->prev->next = p_thread->next;
+        p_thread->next->prev = p_thread->prev;
     }
     
-    ++ thread_queue.node_count;
-    return thread_queue.node_count - 1;
+    thread_queue.node_count --;
+    
+    /* Refresh */
+    
+    /* Move to pool */
+    return __add_thread_to_list_tail(p_thread, &zombie_pool);
 }
 
 int
-__add_thread_to_list_head (lwt_t ** thread)
+__add_thread_to_list_tail (lwt_t * thread, linked_list * list)
 {
-    linked_list_node * node = (linked_list_node *)malloc(sizeof(linked_list_node));
-    node->data= *thread;
-    node->prev= NULL;
-    if (!thread_queue.node_count)
+    
+    if (!list->node_count)
     {
-        thread_queue.head = node;
-        thread_queue.tail = node;
+        list->head = thread;
+        list->tail = thread;
     }
     else
     {
-        thread_queue.head->prev = node;
-        node->next=thread_queue.head;
-        thread_queue.head= node;
+        list->tail->next = thread;
+        thread->prev = list->tail;
+        list->tail = thread;
     }
-    ++ thread_queue.node_count;
-    return thread_queue.node_count - 1;
+    
+    ++ list->node_count;
+    return list->node_count - 1;
 }
 
 int
-__delete_thread_to_list (lwt_t * thread, linked_list * list)
+__add_thread_to_list_head (lwt_t * thread, linked_list * list)
 {
-    linked_list_node * curr = list->head;
-    //linked_list_node * temp = NULL;
-    while (curr)
+
+    thread->prev= NULL;
+    if (!list->node_count)
     {
-        if (thread->lwt_id == curr->data->lwt_id)
-        {
-            curr->prev->next = curr->next;
-            curr->next->prev = curr->prev;
-            /* Free or not? */
-            free(curr);
-            return 1;
-        }
+        list->head = thread;
+        list->tail = thread;
     }
-    return 0;
+    else
+    {
+        list->head->prev = thread;
+        thread->next=list->head;
+        list->head= thread;
+    }
+    ++ list->node_count;
+    return list->node_count - 1;
 }
 
 lwt_t *
 __get_next_thread ()
 {
-    linked_list_node * curr = thread_queue.head;
+    lwt_t * curr = thread_queue.head;
     // TODO scheduling
     while (curr)
     {
-        if (curr->data->status == LWT_INFO_NTHD_RUNNABLE){
-            return curr->data;
+        if (curr->status == LWT_INFO_NTHD_RUNNABLE){
+            return curr;
         }
         curr = curr->next;
     }
@@ -104,7 +116,7 @@ __lwt_schedule ()
 {
     while (1)
     {
-        current_thread = __get_next_thread(&thread_queue);
+        current_thread = __get_next_thread();
         if (current_thread)
             __lwt_dispatch(&schedule_context, &current_thread->context);
     }
@@ -121,7 +133,7 @@ __initiate()
     current_thread->status = LWT_INFO_NTHD_RUNNABLE;
     
     /* Add to TCB */
-    __add_thread_to_list(&current_thread);
+    __add_thread_to_list_tail(current_thread, &thread_queue);
     
     /* Initiate schedule_context */
     uint _sp = (uint) malloc(MAX_STACK_SIZE);
@@ -154,7 +166,7 @@ lwt_create(lwt_fn_t fn, void * data)
     next_thread->context.ip = (uint) fn;
     
     
-    __add_thread_to_list(&next_thread);
+    __add_thread_to_list_tail(next_thread, &thread_queue);
     
     __lwt_dispatch(&current_thread->context, &schedule_context);
     
@@ -168,15 +180,15 @@ lwt_yield(lwt_t* lwt)
     {
         printf("goto specified thread \n");
         lwt_t* current = current_thread;
-        __add_thread_to_list_head(&current_thread);
+//        __add_thread_to_list_head(current_thread);
         __lwt_dispatch(&current->context, &lwt->context);
     }
     else
     {
         printf("resched \n");
         lwt_t* current = current_thread;
-        __add_thread_to_list_head(&current_thread);
-        current_thread = __get_next_thread();
+        __add_thread_to_list_head(current_thread, &thread_queue);
+//        current_thread = __get_next_thread();
         __lwt_dispatch(&current->context, &current_thread->context);
 //        __lwt_dispatch(&current->context, &schedule_context);
 //        __lwt_schedule();
