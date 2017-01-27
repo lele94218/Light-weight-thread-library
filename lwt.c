@@ -4,53 +4,59 @@
 #include "lwt.h"
 
 /* Global variable */
+
+/* used for assigning thread id */
 int lwt_counter = 0;
 int thread_initiated = 0;
 
+/* two queues, one for thread either waiting or running, one for recycling */
 linked_list * valid_queue;
 linked_list * recycle_queue;
+
+/* identify threads */
 lwt_t * current_thread;
 lwt_t * old_thread;
 
 
-/** extern function declaration */
+/* internal function declaration */
+/* functions for thread operation */
 void __lwt_dispatch(lwt_context *curr, lwt_context *next);
 void __lwt_schedule (void);
 lwt_t * __create_thread(int with_stack, lwt_fn_t fn, void * data);
 lwt_t * __reuse_thread(lwt_fn_t fn, void * data);
 void * __lwt_trampoline();
-
-
+static void __initiate(void);
 
 /* thread queue functions declarartion */
 lwt_t * __get_active_thread (linked_list * thread_queue);
 int __add_to_tail(lwt_t * thread, linked_list * thread_queue);
 int __remove_from_queue(lwt_t * thread, linked_list * thread_queue);
 
-static void __initiate(void);
-
+/* add a thread to tail of a thread queue */
 int
 __add_to_tail (lwt_t * thread, linked_list * thread_queue)
 {
-    thread->next = NULL;
+	thread->next = NULL;
 	thread->prev = NULL;
-    
-    if (!thread_queue->node_count)
+
+	if (!thread_queue->node_count)
 	{
-        thread_queue->head = thread;
-        thread_queue->tail = thread;
-    }
-    else
+		thread_queue->head = thread;
+		thread_queue->tail = thread;
+	}
+
+	else
 	{
-        thread_queue->tail->next = thread;
-        thread->prev = thread_queue->tail;
-        thread_queue->tail = thread;
-    }
-    
-    ++ thread_queue->node_count;
-    return thread_queue->node_count - 1;
+	thread_queue->tail->next = thread;
+	thread->prev = thread_queue->tail;
+	thread_queue->tail = thread;
+	}
+
+	++ thread_queue->node_count;
+	return thread_queue->node_count - 1;
 }
 
+/* remove a thread from queue */
 int
 __remove_from_queue(lwt_t * thread, linked_list * thread_queue)
 {
@@ -58,58 +64,61 @@ __remove_from_queue(lwt_t * thread, linked_list * thread_queue)
 	if (thread_queue->node_count==0) return -1;
 	while(tmp_thread)
 	{
-	if (tmp_thread==thread)
-		{
-		if(thread_queue->node_count==1)
+		if (tmp_thread==thread)
 			{
-			thread_queue->head=NULL;
-			thread_queue->tail=NULL;
+			if(thread_queue->node_count==1)
+				{
+				thread_queue->head=NULL;
+				thread_queue->tail=NULL;
+				thread_queue->node_count--;
+				return 0;
+				}
+			if(thread_queue->head==tmp_thread)
+				{
+				thread_queue->head=tmp_thread->next;
+				tmp_thread->next->prev=NULL;
+				thread_queue->node_count--;
+				return 0;
+				}
+			if(thread_queue->tail==tmp_thread)
+				{
+				thread_queue->tail=tmp_thread->prev;
+				tmp_thread->prev->next=NULL;
+				thread_queue->node_count--;
+				return 0;
+				}
+			tmp_thread->prev->next=tmp_thread->next;
+			tmp_thread->next->prev=tmp_thread->prev;
 			thread_queue->node_count--;
 			return 0;
 			}
-		if(thread_queue->head==tmp_thread)
-			{
-			thread_queue->head=tmp_thread->next;
-			tmp_thread->next->prev=NULL;
-			thread_queue->node_count--;
-			return 0;
-			}
-		if(thread_queue->tail==tmp_thread)
-			{
-			thread_queue->tail=tmp_thread->prev;
-			tmp_thread->prev->next=NULL;
-			thread_queue->node_count--;
-			return 0;
-			}
-		tmp_thread->prev->next=tmp_thread->next;
-		tmp_thread->next->prev=tmp_thread->prev;
-		thread_queue->node_count--;
-		return 0;
-		}
-	tmp_thread=tmp_thread->next;
+		tmp_thread=tmp_thread->next;
 	}
 	printf("thread to be removed not found!\n");
 	return -1;
 }
 
+/* get a thread that is with highest priority (at the head of queue). */
 lwt_t *
 __get_active_thread (linked_list * thread_queue)
 {
-    lwt_t * curr = thread_queue->head;
-    // TODO scheduling
-    while (curr)
-    {
-        if (curr->status == LWT_INFO_NTHD_RUNNABLE){
-            return curr;
-        }
-        curr = curr->next;
-    }
+	lwt_t * curr = thread_queue->head;
+	while (curr)
+	{
+		if (curr->status == LWT_INFO_NTHD_RUNNABLE)
+		{
+			return curr;
+		}
+		curr = curr->next;
+	}
     return NULL;
 }
 
+/* pause one thread, start executing the next one */
 void __lwt_dispatch(lwt_context *curr, lwt_context *next)
 {
-__asm__ __volatile(
+__asm__ __volatile
+	(
 	//"push %edi\n\t"
         //"push %esi\n\t"
 	//"push %ebx\n\t"
@@ -119,7 +128,6 @@ __asm__ __volatile(
 	"mov 0x8(%ebp),%eax\n\t"
 	"add $0x4,%eax\n\t"
 	"mov 0x8(%ebp),%ebx\n\t"
-	
 	"push %ebp\n\t"
 	//"push %eax\n\t"
 	"push %ebx\n\t"
@@ -137,9 +145,10 @@ __asm__ __volatile(
 	//"pop %ebx\n\t"
 	//"pop %esi\n\t"
 	//"pop %edi\n\t"
-);
+	);
 }
 
+/* find one proper thread to execute from pool */
 void
 __lwt_schedule ()
 {
@@ -153,6 +162,7 @@ __lwt_schedule ()
 	else {printf("error in getting a valid thread from queue \n");}
 }
 
+/* create and initialize a thread */
 lwt_t * __create_thread(int with_stack, lwt_fn_t fn, void * data)
 {
 	lwt_t * created_thread=(lwt_t * ) malloc (sizeof(lwt_t));
@@ -179,7 +189,9 @@ lwt_t * __create_thread(int with_stack, lwt_fn_t fn, void * data)
 	return created_thread;
 }
 
-lwt_t * __reuse_thread(lwt_fn_t fn, void * data)
+/* reuse a thread from recycle_queue instead of create */
+lwt_t *
+__reuse_thread(lwt_fn_t fn, void * data)
 {
 	lwt_t * reused_thread=recycle_queue->head;
 	reused_thread->lwt_id = lwt_counter ++;
@@ -197,48 +209,47 @@ lwt_t * __reuse_thread(lwt_fn_t fn, void * data)
 	*((uint *)_sp) = (uint)__lwt_trampoline;
 	reused_thread->context.sp = _sp;
 	reused_thread->context.ip = (uint) fn;
-
 	return reused_thread;
 }
 
+/* initialize main thread and the queues when user called create at first time */
 static void
 __initiate()
 {
-    thread_initiated = 1;
-    
-    /* Add main thread to TCB */
-    current_thread = __create_thread(0, (void *)NULL, NULL);
-
-    /* Initialize valid queue */
+	thread_initiated = 1;
+	current_thread = __create_thread(0, (void *)NULL, NULL);
+	/* initialize valid_queue */
 	valid_queue=(linked_list *)malloc(sizeof(linked_list));
 	valid_queue->node_count=0;
 	valid_queue->head=NULL;
 	valid_queue->tail=NULL;
-	/* initialize zombie queue */
+	/* initialize recycle queue */
 	recycle_queue=(linked_list *)malloc(sizeof(linked_list));
 	recycle_queue->node_count=0;
 	recycle_queue->head=NULL;
 	recycle_queue->tail=NULL;
-    __add_to_tail(current_thread,valid_queue);
+	__add_to_tail(current_thread,valid_queue);
 	printf("initialization complete\n");
 }
 
+/* create a thread, return its lwt_t pointer */
 lwt_t *
 lwt_create(lwt_fn_t fn, void * data)
 {
-    if(!thread_initiated) __initiate();
+	if(!thread_initiated) __initiate();
 	lwt_t * next_thread;
 	/* re-use from recycle queue */
 	next_thread=recycle_queue->node_count? __reuse_thread(fn, data) :__create_thread(1, fn, data);
 	printf("thread: %d has created thread: %d\n", current_thread->lwt_id,next_thread->lwt_id);
-    __add_to_tail(next_thread,valid_queue);
-
-    old_thread=current_thread;
+	__add_to_tail(next_thread,valid_queue);
+	old_thread=current_thread;
 	current_thread=next_thread;
-    __lwt_dispatch(&old_thread->context, &current_thread->context);
-    return next_thread;
+	/* execute the new thread */
+	__lwt_dispatch(&old_thread->context, &current_thread->context);
+	return next_thread;
 }
 
+/* mark as zombie, put to recycle, unlock other waiting threads and broadcast the messsage to them */
 void
 lwt_die(void * message)
 {
@@ -255,16 +266,16 @@ lwt_die(void * message)
 		tmp=tmp->unlock;
 		prevtmp->unlock=NULL;
 	}
-
 	/* go die */
 	current_thread->status=LWT_INFO_NTHD_ZOMBIES;
 	__remove_from_queue(current_thread, valid_queue);
 	__add_to_tail(current_thread, recycle_queue);
 	printf("removed dead thread %d from valid queue\n", current_thread->lwt_id);
-    __lwt_schedule();
+	/* pass flow to another thread */
+	__lwt_schedule();
 }
 
-/* when a thread function return, inline assemble extract return value %eax to a variable */
+/* when thread ends from beginning function, extract return value and ready to kill the thread */
 void * __lwt_trampoline()
 {
 	void * return_message;
@@ -277,6 +288,7 @@ void * __lwt_trampoline()
 	lwt_die(return_message);
 }
 
+/* put the thread to queue end, allow others to execute, if argument has a value, yield to a specific thread */
 int
 lwt_yield(lwt_t * strong_thread)
 {
@@ -298,6 +310,7 @@ lwt_yield(lwt_t * strong_thread)
 	return 1;
 }
 
+/* blocked and wait for the argument thread, when argument thread ends, resume execution and return message from the dead thread */
 void *
 lwt_join(lwt_t * thread_to_wait)
 {
@@ -328,19 +341,21 @@ lwt_join(lwt_t * thread_to_wait)
 	return message;
 }
 
-
+/* return current active thread */
 lwt_t *
 lwt_current()
 {
 	return current_thread;
 }
 
+/* return the id of a thread */
 int
 lwt_id(lwt_t * input_thread)
 {
 	return current_thread->lwt_id;
 }
 
+/* internal test function, out put the valid queue and its thread status */
 void
 test_thread_queue()
 {
@@ -351,6 +366,8 @@ test_thread_queue()
 		current=current->next;
 	}
 }
+
+/* internal test function, out put the valid queue and its thread status */
 void
 print_living_thread_info()
 {

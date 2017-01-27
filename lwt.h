@@ -1,36 +1,31 @@
 #ifndef LWT_H
 #define LWT_H
 
-/* */
-
+/* define size of stack for created thread */
 #define MAX_STACK_SIZE 2097152
 
-/* Data redefinition */
+/* Data type redefinition */
 typedef unsigned int uint;
 typedef unsigned short ushort;
 typedef unsigned char uchar;
-
-
-/* Thread id */
 typedef int t_id;
-
 
 /* define a function pointer */
 typedef void * (*lwt_fn_t)(void *);
 
-
 /* Thread state.  */
 typedef enum _lwt_info_t
 {
-    /* The thread is running. */
-    LWT_INFO_NTHD_RUNNABLE= 0,
-    /* The thread is blocked. */
-    LWT_INFO_NTHD_BLOCKED,
-    /* This is a zombie thread. */
-    LWT_INFO_NTHD_ZOMBIES
+	/* The thread is running. */
+	LWT_INFO_NTHD_RUNNABLE,
+	/* The thread is blocked. */
+	LWT_INFO_NTHD_BLOCKED,
+	/* This is a zombie thread. */
+	LWT_INFO_NTHD_ZOMBIES
 }
 lwt_info_t;
 
+/* define the context of a thread */
 typedef struct _lwt_context
 {
 	unsigned int ip, sp;
@@ -40,10 +35,11 @@ lwt_context;
 /* This structure describes a LWT thread. */
 typedef struct _lwt_t
 {
-    /* Thread id */
-    t_id lwt_id;
-    
-    lwt_info_t status;
+	/* Thread id */
+	t_id lwt_id;
+
+	/* the status of a thread */
+	lwt_info_t status;
 
 	/* previous and next thread in list */
 	struct _lwt_t * next;
@@ -59,16 +55,16 @@ typedef struct _lwt_t
 	/* return value */
 	void * last_word;
     
-    /* Thread context */
-    lwt_context context;
+	/* Thread context */
+	lwt_context context;
 }
 lwt_t;
 
 /* LinkedList definiation */
 typedef struct _linked_list
 {
-    lwt_t *head, *tail;
-    int node_count;
+	lwt_t *head, *tail;
+	int node_count;
 }
 linked_list;
 
@@ -82,17 +78,7 @@ lwt_t * lwt_current();
 int lwt_id(lwt_t * input_thread);
 lwt_t * lwt_current();
 
-//int lwt_info(lwt_info_t t);
-
-
 /* test function declaration */
 void print_living_thread_info();
 
-
-
 #endif
-
-
-
-
-
