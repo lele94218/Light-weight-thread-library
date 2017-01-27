@@ -1,8 +1,8 @@
-#include <stdio.h>
-#include <stdlib.h>
+#include <stdio.h> #include <stdlib.h>
 
 #include "lwt.h"
 #include "lwt_dispatch.h"
+#include <stdlib.h>
 
 /* Global variable */
 int lwt_counter = 0;
@@ -239,8 +239,8 @@ lwt_yield(lwt_t * lwt)
 void
 lwt_die(void * message)
 {
-//    printf("die function received %d as argument\n",(int)message);
-//    current_thread->last_word=message;
+    printf("die function received %d as argument\n",(int)message);
+    current_thread->last_word=message;
     /* unlock the threads that are waiting */
     lwt_t * tmp=current_thread;
     lwt_t * prevtmp;
