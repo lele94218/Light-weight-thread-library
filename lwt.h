@@ -2,11 +2,8 @@
 #define LWT_H
 
 /* */
-#include "lwt_dispatch.h"
 
 #define MAX_STACK_SIZE 2097152
-
-
 
 /* Data redefinition */
 typedef unsigned int uint;
@@ -33,6 +30,12 @@ typedef enum _lwt_info_t
     LWT_INFO_NTHD_ZOMBIES
 }
 lwt_info_t;
+
+typedef struct _lwt_context
+{
+	unsigned int ip, sp;
+}
+lwt_context;
 
 /* This structure describes a LWT thread. */
 typedef struct _lwt_t

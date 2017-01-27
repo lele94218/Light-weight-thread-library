@@ -4,7 +4,6 @@
 
 /* user lib include */
 #include "lwt.h"
-#include "lwt_dispatch.h"
 
 int fun(int argument);
 int fun2();
@@ -14,6 +13,7 @@ lwt_t * t1;
 lwt_t * t2;
 int fun(int argument)
 {
+	printf("start executing\n");
 	lwt_yield(NULL);
 	printf("fun has been executed by thread %d with input arg %d\n", lwt_id(lwt_current()),argument);
 	argument+=1;

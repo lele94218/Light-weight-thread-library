@@ -2,7 +2,6 @@
 #include <stdlib.h>
 
 #include "lwt.h"
-#include "lwt_dispatch.h"
 
 /* Global variable */
 int lwt_counter = 0;
@@ -16,6 +15,7 @@ lwt_t * old_thread;
 
 
 /** extern function declaration */
+void __lwt_dispatch(lwt_context *curr, lwt_context *next);
 void __lwt_schedule (void);
 lwt_t * __create_thread(int with_stack, lwt_fn_t fn, void * data);
 lwt_t * __reuse_thread(lwt_fn_t fn, void * data);
@@ -106,6 +106,38 @@ __get_active_thread (linked_list * thread_queue)
         curr = curr->next;
     }
     return NULL;
+}
+
+void __lwt_dispatch(lwt_context *curr, lwt_context *next)
+{
+__asm__ __volatile(
+	"push %edi\n\t"
+        "push %esi\n\t"
+	"push %ebx\n\t"
+	"mov 0xc(%ebp),%eax\n\t"
+	"mov 0x4(%eax),%ecx\n\t"
+	"mov (%eax),%edx\n\t"
+	"mov 0x8(%ebp),%eax\n\t"
+	"add $0x4,%eax\n\t"
+	"mov 0x8(%ebp),%ebx\n\t"
+	
+	"push %ebp\n\t"
+	"push %eax\n\t"
+	"push %ebx\n\t"
+	"push %ecx\n\t"
+	"push %edx\n\t"
+	"mov %esp,(%eax)\n\t"
+	"movl $return,(%ebx)\n\t"
+	"mov %ecx,%esp\n\t"
+	"jmp *%edx\n\t"
+	"return: pop %edx\n\t"
+	"pop %ecx\n\t"
+	"pop %ebx\n\t"
+	"pop %eax\n\t"
+	"pop %ebp\n\t"
+	"pop %ebx\n\t"
+	"pop %esi\n\t"
+	"pop %edi\n\t");
 }
 
 void
