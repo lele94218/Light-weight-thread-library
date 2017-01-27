@@ -199,6 +199,7 @@ lwt_yield(lwt_t * lwt)
     __add_thread_to_list_tail(current_thread, &thread_queue);
     
     
+    
     if (lwt)
     {
         printf("goto specified thread \n");
@@ -211,6 +212,7 @@ lwt_yield(lwt_t * lwt)
     }
     
     __lwt_dispatch(&current_thread->context, &schedule_context);
+//    __lwt_schedule();
     return 0;
 }
 
@@ -280,9 +282,10 @@ lwt_join(lwt_t * thread_to_wait)
     
     printf("thread %d blocked, waiting for thread %d\n", current_thread->lwt_id, thread_to_wait->lwt_id);
     current_thread->status=LWT_INFO_NTHD_BLOCKED;
-    __remove_from_list(current_thread, &thread_queue);
-    __add_thread_to_list_tail(current_thread, &thread_queue);
-    __lwt_schedule();
+//    __remove_from_list(current_thread, &thread_queue);
+//    __add_thread_to_list_tail(current_thread, &thread_queue);
+//    __lwt_schedule();
+    __lwt_dispatch(&current_thread->context, &schedule_context);
     printf("thread %d picked up dead threads %d's last word %d\n", current_thread->lwt_id, current_thread->waiting_for->lwt_id,(int)current_thread->waiting_for->last_word);
     void * message=current_thread->waiting_for->last_word;
     current_thread->waiting_for=NULL;
