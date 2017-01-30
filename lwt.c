@@ -232,6 +232,14 @@ lwt_die(void * message)
     printf("die function received %d as argument\n", (int)message);
     current_thread->parent->last_word = message;
     
+    /* Set parent to runable */
+    current_thread->parent->status = LWT_INFO_NTHD_RUNNABLE;
+    
+    /* Release reference */
+    current_thread->parent->waiting_for = NULL;
+    current_thread->waiting_for->parent = NULL;
+    
+    
     /* Go die */
     current_thread->status=LWT_INFO_NTHD_ZOMBIES;
     __move_thread_to_pool(current_thread, &thread_queue, &zombie_pool);
@@ -265,9 +273,6 @@ lwt_join(lwt_t * thread_to_wait)
     printf("thread %d picked up dead threads %d's last word %d\n", current_thread->lwt_id, thread_to_wait->lwt_id,
            (int)thread_to_wait->last_word);
     
-    /* release reference */
-    current_thread->parent->waiting_for = NULL;
-    current_thread->waiting_for->parent = NULL;
     
     return (void *)(thread_to_wait->last_word);
 }
