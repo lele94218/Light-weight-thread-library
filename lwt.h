@@ -45,11 +45,11 @@ typedef struct _lwt_t
     /* Thread context */
     lwt_context context;
     
-    /* thread regarding join and wait */
+    /* Thread regarding join and wait */
     struct _lwt_t * unlock;
     struct _lwt_t * waiting_for;
     
-    /* return value */
+    /* Return value */
     void * last_word;
     
     struct _lwt_t * prev;
