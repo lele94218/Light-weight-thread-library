@@ -185,7 +185,7 @@ lwt_create(lwt_fn_t fn, void * data)
     next_thread->status = LWT_INFO_NTHD_RUNNABLE;
     next_thread->next = NULL;
     next_thread->prev = NULL;
-    next_thread->unlock = NULL;
+    next_thread->parent = NULL;
     next_thread->waiting_for = NULL;
     next_thread->last_word = NULL;
     
@@ -229,25 +229,12 @@ lwt_yield(lwt_t * lwt)
 void
 lwt_die(void * message)
 {
-    printf("die function received %d as argument\n",(int)message);
-    current_thread->last_word = message;
-    
-    /* Unlock the threads that are waiting */
-    lwt_t * tmp = current_thread;
-    lwt_t * prevtmp;
-    while(tmp->unlock)
-    {
-        tmp->unlock->status = LWT_INFO_NTHD_RUNNABLE;
-        printf("thread %d is dying and join thread %d\n", current_thread->lwt_id, tmp->unlock->lwt_id);
-        prevtmp = tmp;
-        tmp = tmp->unlock;
-        prevtmp->unlock = NULL;
-    }
+    printf("die function received %d as argument\n", (int)message);
+    current_thread->parent->last_word = message;
     
     /* Go die */
     current_thread->status=LWT_INFO_NTHD_ZOMBIES;
-    __remove_from_list(current_thread, &thread_queue);
-    __add_thread_to_list_tail(current_thread, &zombie_pool);
+    __move_thread_to_pool(current_thread, &thread_queue, &zombie_pool);
     
     printf("removed dead thread %d from valid queue\n", current_thread->lwt_id);
     
@@ -257,8 +244,6 @@ lwt_die(void * message)
 void *
 lwt_join(lwt_t * thread_to_wait)
 {
-    current_thread->waiting_for = thread_to_wait;
-    
     if(thread_to_wait == NULL)
     {
         printf("error: current thread is waiting for a thread does not exists");
@@ -268,24 +253,23 @@ lwt_join(lwt_t * thread_to_wait)
         printf("error: current thread is waiting for a dead thread");
     }
     
-    lwt_t * curr = thread_to_wait;
+    current_thread->waiting_for = thread_to_wait;
+    thread_to_wait->parent = current_thread;
     
-    while (curr->unlock)
-    {
-        curr = curr->unlock;
-    }
-    curr->unlock = current_thread;
     
     printf("thread %d blocked, waiting for thread %d\n", current_thread->lwt_id, thread_to_wait->lwt_id);
     
     current_thread->status = LWT_INFO_NTHD_BLOCKED;
     __lwt_dispatch(&current_thread->context, &schedule_context);
     
-    printf("thread %d picked up dead threads %d's last word %d\n", current_thread->lwt_id, current_thread->waiting_for->lwt_id,(int)current_thread->waiting_for->last_word);
+    printf("thread %d picked up dead threads %d's last word %d\n", current_thread->lwt_id, thread_to_wait->lwt_id,
+           (int)thread_to_wait->last_word);
     
-    void * message = current_thread->waiting_for->last_word;
-    current_thread->waiting_for = NULL;
-    return message;
+    /* release reference */
+    current_thread->parent->waiting_for = NULL;
+    current_thread->waiting_for->parent = NULL;
+    
+    return (void *)(thread_to_wait->last_word);
 }
 
 void * __lwt_trampoline()
@@ -296,7 +280,7 @@ void * __lwt_trampoline()
                          :
                          :
                          );
-    printf("trampoline captured thread %d's function return value %d\n", current_thread->lwt_id,(int)return_message);
+    printf("trampoline captured thread %d's function return value %d\n", current_thread->lwt_id, (int)return_message);
     
     lwt_die(return_message);
     return NULL;

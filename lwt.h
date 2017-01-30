@@ -45,8 +45,8 @@ typedef struct _lwt_t
     /* Thread context */
     lwt_context context;
     
-    /* Thread regarding join and wait */
-    struct _lwt_t * unlock;
+    /* Thread regarding join */
+    struct _lwt_t * parent;
     struct _lwt_t * waiting_for;
     
     /* Return value */
