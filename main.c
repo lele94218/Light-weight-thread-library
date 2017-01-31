@@ -9,6 +9,8 @@
 lwt_t * t1;
 lwt_t * t2;
 lwt_t * t3;
+lwt_t * t4;
+lwt_t * t5;
 
 void fun1();
 void fun2();
@@ -53,7 +55,10 @@ int main()
 {
     t1 = lwt_create((void *) fun1, NULL);
     t2 = lwt_create((void *) fun2, NULL);
+	lwt_join(t1);
+	lwt_join(t2);
     t3 = lwt_create((void *) fun3, NULL);
-    lwt_join(t1);
+	t4 = lwt_create((void *) fun4, NULL);
+    //lwt_join(t1);
     printf("main finishing...\n");
 }

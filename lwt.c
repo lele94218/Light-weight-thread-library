@@ -39,12 +39,14 @@ void __remove_from_list(lwt_t * p_thread, linked_list * list)
     /* Remove from run queue */
     if (p_thread == list->head)
     {
-        p_thread->next->prev = NULL;
+		if (p_thread->next)
+			p_thread->next->prev = NULL;
         list->head = p_thread->next;
     }
-    else if (p_thread == thread_queue.tail)
+    else if (p_thread == list->tail)
     {
-        p_thread->prev->next = NULL;
+		if (p_thread->prev)
+			p_thread->prev->next = NULL;
         list->tail = p_thread->prev;
     }
     else
@@ -53,7 +55,7 @@ void __remove_from_list(lwt_t * p_thread, linked_list * list)
         p_thread->next->prev = p_thread->prev;
     }
     
-    thread_queue.node_count --;
+    list->node_count --;
 }
 
 int __move_thread_to_pool (lwt_t * p_thread, linked_list * run_list, linked_list * zombie_list)
@@ -163,7 +165,8 @@ lwt_create(lwt_fn_t fn, void * data)
     uint _sp;
     if(!thread_initiated)
         __initiate();
-    
+
+    printf("Thread %d creating new thread...\n", current_thread->lwt_id);
     lwt_t * next_thread;
     
     /* Recycle from zombie pool */
@@ -171,6 +174,7 @@ lwt_create(lwt_fn_t fn, void * data)
     {
         next_thread = zombie_pool.tail;
         __remove_from_list(next_thread, &zombie_pool);
+		_sp =  next_thread->context.sp;
     }
     else
     {
@@ -229,15 +233,18 @@ lwt_yield(lwt_t * lwt)
 void
 lwt_die(void * message)
 {
-    printf("die function received %d as argument\n", (int)message);
-    current_thread->parent->last_word = message;
-    
-    /* Set parent to runable */
-    current_thread->parent->status = LWT_INFO_NTHD_RUNNABLE;
+    printf("Thread %d: die function received %d as argument\n", current_thread->lwt_id, (int) message);
+	if (current_thread->parent)
+	{
+		current_thread->parent->last_word = message;
+		current_thread->parent->status = LWT_INFO_NTHD_RUNNABLE;
+	}
     
     /* Release reference */
-    current_thread->parent->waiting_for = NULL;
-    current_thread->waiting_for->parent = NULL;
+    if (current_thread->parent)
+        current_thread->parent->waiting_for = NULL;
+    if (current_thread->waiting_for)
+        current_thread->waiting_for->parent = NULL;
     
     
     /* Go die */
@@ -254,11 +261,11 @@ lwt_join(lwt_t * thread_to_wait)
 {
     if(thread_to_wait == NULL)
     {
-        printf("error: current thread is waiting for a thread does not exists");
+        printf("Thread %d error: current thread is waiting for a thread does not exists\n", current_thread->lwt_id);
     }
     else if(thread_to_wait->status == LWT_INFO_NTHD_ZOMBIES)
     {
-        printf("error: current thread is waiting for a dead thread");
+        printf("Thread %d error: current thread is waiting for a dead thread\n", current_thread->lwt_id);
     }
     
     current_thread->waiting_for = thread_to_wait;
