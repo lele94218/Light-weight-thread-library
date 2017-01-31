@@ -262,10 +262,22 @@ lwt_join(lwt_t * thread_to_wait)
     if(thread_to_wait == NULL)
     {
         printf("Thread %d error: current thread is waiting for a thread does not exists\n", current_thread->lwt_id);
+        return NULL;
     }
     else if(thread_to_wait->status == LWT_INFO_NTHD_ZOMBIES)
     {
         printf("Thread %d error: current thread is waiting for a dead thread\n", current_thread->lwt_id);
+        return NULL;
+    }
+    else if(thread_to_wait->parent)
+    {
+        printf("error, some thread is waiting for the target \n");
+        return NULL;
+    }
+    else if(thread_to_wait == current_thread)
+    {
+        printf("error, thread cannot wait for himself \n");
+        return NULL;
     }
     
     current_thread->waiting_for = thread_to_wait;
