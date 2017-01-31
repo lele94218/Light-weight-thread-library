@@ -46,8 +46,8 @@ typedef struct _lwt_t
 	struct _lwt_t * prev;
 
 	/* thread regarding join and wait */
-	struct _lwt_t * unlock;
-	struct _lwt_t * waiting_for;
+	struct _lwt_t * merge_to;
+	struct _lwt_t * wait_merge;
 	
 	/* initial stack pointer */
 	unsigned int init_sp;

@@ -170,8 +170,8 @@ lwt_t * __create_thread(int with_stack, lwt_fn_t fn, void * data)
 	created_thread->status = LWT_INFO_NTHD_RUNNABLE;
 	created_thread->next=NULL;
 	created_thread->prev=NULL;
-	created_thread->unlock=NULL;
-	created_thread->waiting_for=NULL;
+	created_thread->merge_to=NULL;
+	created_thread->wait_merge=NULL;
 	created_thread->last_word=NULL;
 	if (with_stack)
 	{
@@ -198,8 +198,8 @@ __reuse_thread(lwt_fn_t fn, void * data)
 	reused_thread->status = LWT_INFO_NTHD_RUNNABLE;
 	reused_thread->next=NULL;
 	reused_thread->prev=NULL;
-	reused_thread->unlock=NULL;
-	reused_thread->waiting_for=NULL;
+	reused_thread->merge_to=NULL;
+	reused_thread->wait_merge=NULL;
 	reused_thread->last_word=NULL;
 	printf("create thread %d from recycle\n", reused_thread->lwt_id);
 	uint _sp=reused_thread->init_sp;
@@ -249,23 +249,20 @@ lwt_create(lwt_fn_t fn, void * data)
 	return next_thread;
 }
 
-/* mark as zombie, put to recycle, unlock other waiting threads and broadcast the messsage to them */
+/* mark as zombie, put to recycle, merge to other waiting threads and deliver the messsage to them */
 void
 lwt_die(void * message)
 {
 	printf("die function received %d as argument\n",(int)message);
 	current_thread->last_word=message;
-	/* unlock the threads that are waiting */
-	lwt_t * tmp=current_thread;
-	lwt_t * prevtmp;
-	while(tmp->unlock)
+	/* unlock the threads that are waiting to merge it */
+	if (current_thread->merge_to)
 	{
-		tmp->unlock->status=LWT_INFO_NTHD_RUNNABLE;
-		printf("thread %d about to die and join thread %d\n", current_thread->lwt_id, tmp->unlock->lwt_id);
-		prevtmp=tmp;
-		tmp=tmp->unlock;
-		prevtmp->unlock=NULL;
+		current_thread->merge_to->status=LWT_INFO_NTHD_RUNNABLE;
+		current_thread->merge_to->last_word=message;
+		current_thread->merge_to=NULL;
 	}
+
 	/* go die */
 	current_thread->status=LWT_INFO_NTHD_ZOMBIES;
 	__remove_from_queue(current_thread, valid_queue);
@@ -314,7 +311,7 @@ lwt_yield(lwt_t * strong_thread)
 void *
 lwt_join(lwt_t * thread_to_wait)
 {
-	current_thread->waiting_for=thread_to_wait;
+	current_thread->wait_merge=thread_to_wait;
 	if(thread_to_wait==NULL)
 	{
 		printf("error: current thread is waiting for a thread does not exists");
@@ -323,22 +320,17 @@ lwt_join(lwt_t * thread_to_wait)
 	{
 		printf("error: current thread is waiting for a dead thread");
 	}
-	lwt_t * curr=thread_to_wait;
-	while (curr->unlock)
-	{
-		curr=curr->unlock;
-	}
-	curr->unlock=current_thread;
+	/* register to target thread */
+	thread_to_wait->merge_to=current_thread;
 
-	printf("thread %d blocked, waiting for thread %d\n", current_thread->lwt_id, thread_to_wait->lwt_id);
+	printf("thread %d blocked, waiting for thread %d to join\n", current_thread->lwt_id, thread_to_wait->lwt_id);
 	current_thread->status=LWT_INFO_NTHD_BLOCKED;
 	__remove_from_queue(current_thread, valid_queue);
 	__add_to_tail(current_thread, valid_queue);
 	__lwt_schedule();
-	printf("thread %d picked up dead threads %d's last word %d\n", current_thread->lwt_id, current_thread->waiting_for->lwt_id,(int)current_thread->waiting_for->last_word);
-	void * message=current_thread->waiting_for->last_word;
-	current_thread->waiting_for=NULL;
-	return message;
+	printf("thread %d picked up dead threads %d's last word %d\n", current_thread->lwt_id, current_thread->wait_merge->lwt_id,(int)current_thread->last_word);
+	current_thread->wait_merge=NULL;
+	return current_thread->last_word;
 }
 
 /* return current active thread */
