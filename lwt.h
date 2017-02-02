@@ -58,26 +58,25 @@ typedef struct _lwt_t
 	/* Thread context */
 	lwt_context context;
 }
-lwt_t;
+*lwt_t;
 
 /* LinkedList definiation */
 typedef struct _linked_list
 {
-	lwt_t *head, *tail;
+	lwt_t head, tail;
 	int node_count;
 }
 linked_list;
 
 
 /* Funciton declaration */
-lwt_t * lwt_create(lwt_fn_t fn, void * data);
-void * lwt_join(lwt_t * thread_to_wait);
+lwt_t  lwt_create(lwt_fn_t fn, void * data);
+void * lwt_join(lwt_t  thread_to_wait);
 void lwt_die(void *);
-int lwt_yield(lwt_t * strong_thread);
-lwt_t * lwt_current();
-int lwt_id(lwt_t * input_thread);
-lwt_t * lwt_current();
-
+int lwt_yield(lwt_t  strong_thread);
+lwt_t lwt_current();
+int lwt_id(lwt_t  input_thread);
+int lwt_info(lwt_info_t t);
 /* test function declaration */
 void print_living_thread_info();
 
