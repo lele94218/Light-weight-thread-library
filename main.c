@@ -22,8 +22,9 @@ int * fun(int * argument)
 
 int fun2()
 {
-	int t1_last_word=(int)lwt_join(t0);
-	printf("thread %d woke up, get the last word %d from its waker\n",lwt_id(lwt_current()),t1_last_word);
+	
+	printf("thread %d is executing and ends\n",lwt_id(lwt_current()));
+	return 5;
 }
 
 int main()
@@ -34,10 +35,9 @@ int main()
 	lwt_yield(NULL);
 	lwt_join(t1);
 
-	/*t2 = lwt_create((void *) fun2, NULL);
-    int t1_last_word=(int)lwt_join(t1);
-	printf("main thread woke up, get the last word %d from its waker\n",t1_last_word);
-	t1 = lwt_create((void *) fun, (void *)12345);*/
+	t2 = lwt_create((void *) fun2, NULL);
+	int argToReceive=(int)lwt_join(t2);
+	printf("main thread picked up thread 2's return value %d\n",argToReceive);
     printf("main finishing, following threads still active:\n");
 	print_living_thread_info();
 	return 0;
