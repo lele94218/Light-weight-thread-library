@@ -49,7 +49,7 @@ typedef struct _lwt_t
 	struct _lwt_t * merge_to;
 	struct _lwt_t * wait_merge;
 	
-	/* initial stack pointer */
+	/* initial stack memory pointer, lowest address */
 	unsigned int init_sp;
 
 	/* return value */

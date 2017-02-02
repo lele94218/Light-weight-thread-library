@@ -205,9 +205,10 @@ lwt_t * __create_thread(int with_stack, lwt_fn_t fn, void * data)
     		_sp += (MAX_STACK_SIZE - sizeof(uint));
     		*((uint *)_sp) = (uint)data;
     		_sp -= (sizeof(uint));
-    		*((uint *)_sp) = (uint)__lwt_trampoline;
+    		*((uint *)_sp) = (uint)fn;
+		_sp -= (sizeof(uint));
 		created_thread->context.sp = _sp;
-    		created_thread->context.ip = (uint) fn;
+    		created_thread->context.ip = (uint) __lwt_trampoline;
 	}
 	printf("create thread %d complete\n", created_thread->lwt_id);
 	return created_thread;
@@ -230,9 +231,10 @@ __reuse_thread(lwt_fn_t fn, void * data)
 	_sp += (MAX_STACK_SIZE - sizeof(uint));
 	*((uint *)_sp) = (uint)data;
 	_sp -= (sizeof(uint));
-	*((uint *)_sp) = (uint)__lwt_trampoline;
+    	*((uint *)_sp) = (uint)fn;
+	_sp -= (sizeof(uint));
 	reused_thread->context.sp = _sp;
-	reused_thread->context.ip = (uint) fn;
+	reused_thread->context.ip = (uint) __lwt_trampoline;
 	return reused_thread;
 }
 
@@ -262,7 +264,7 @@ lwt_create(lwt_fn_t fn, void * data)
 {
 	if(!thread_initiated) __initiate();
 	lwt_t * next_thread;
-	/* re-use from recycle queue */
+	/* decide if re-use from recycle queue */
 	next_thread=recycle_queue->node_count? __reuse_thread(fn, data) :__create_thread(1, fn, data);
 	printf("thread: %d has created thread: %d\n", current_thread->lwt_id,next_thread->lwt_id);
 	__add_to_tail(next_thread,valid_queue);
@@ -277,7 +279,7 @@ lwt_create(lwt_fn_t fn, void * data)
 void
 lwt_die(void * message)
 {
-	printf("die function received %d as argument\n",(int)message);
+	printf("die function received %d as argument\n",*(int *)message);
 	current_thread->last_word=message;
 	/* unlock the threads that are waiting to merge it */
 	if (current_thread->merge_to)
@@ -297,15 +299,10 @@ lwt_die(void * message)
 }
 
 /* when thread ends from beginning function, extract return value and ready to kill the thread */
-void * __lwt_trampoline()
+void * __lwt_trampoline(lwt_fn_t fn, void * data)
 {
-	void * return_message;
-	__asm__ __volatile__("movl %%eax, %0"
-	:"=b" (return_message)
-	:
-	:
-	);
-	printf("trampoline captured thread %d's function return value %d\n", current_thread->lwt_id,(int)return_message);
+	void * return_message=fn(data);
+	printf("trampoline captured thread %d's function return value %d\n", current_thread->lwt_id,*(int *)return_message);
 	lwt_die(return_message);
 }
 
@@ -365,7 +362,7 @@ lwt_join(lwt_t * thread_to_wait)
 	__remove_from_queue(current_thread, valid_queue);
 	__add_to_tail(current_thread, valid_queue);
 	__lwt_schedule();
-	printf("thread %d picked up dead threads %d's last word %d\n", current_thread->lwt_id, current_thread->wait_merge->lwt_id,(int)current_thread->last_word);
+	printf("thread %d picked up dead threads %d's last word %d\n", current_thread->lwt_id, current_thread->wait_merge->lwt_id,*(int*)current_thread->last_word);
 	current_thread->wait_merge=NULL;
 	return current_thread->last_word;
 }
@@ -374,6 +371,7 @@ lwt_join(lwt_t * thread_to_wait)
 lwt_t *
 lwt_current()
 {
+	if(!thread_initiated) __initiate();
 	return current_thread;
 }
 
