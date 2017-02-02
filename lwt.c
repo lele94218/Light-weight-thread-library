@@ -335,7 +335,7 @@ lwt_yield(lwt_t * strong_thread)
 void *
 lwt_join(lwt_t * thread_to_wait)
 {
-	current_thread->wait_merge=thread_to_wait;
+
 	if(thread_to_wait==NULL)
 	{
 		printf("error: current thread is waiting for a thread does not exists");
@@ -351,7 +351,8 @@ lwt_join(lwt_t * thread_to_wait)
 		printf("error: cannot join a thread that is been reserved by others");
 		return NULL;
 	}
-	/* register to target thread */
+	/* update both thread */
+	current_thread->wait_merge=thread_to_wait;
 	thread_to_wait->merge_to=current_thread;
 
 	printf("thread %d blocked, waiting for thread %d to join\n", current_thread->lwt_id, thread_to_wait->lwt_id);
