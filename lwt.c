@@ -302,6 +302,7 @@ lwt_die(void * message)
 void * __lwt_trampoline(lwt_fn_t fn, void * data)
 {
 	void * return_message=fn(data);
+	printf("thread %d ready to die, with last word %d\n",current_thread->lwt_id,(int)return_message);
 	lwt_die(return_message);
 }
 
@@ -361,7 +362,7 @@ lwt_join(lwt_t * thread_to_wait)
 	__remove_from_queue(current_thread, valid_queue);
 	__add_to_tail(current_thread, valid_queue);
 	__lwt_schedule();
-	printf("thread %d picked up dead threads %d's last word\n", current_thread->lwt_id, current_thread->wait_merge->lwt_id);
+	printf("thread %d picked up dead threads %d's last word%d\n", current_thread->lwt_id, current_thread->wait_merge->lwt_id, (int)current_thread->last_word);
 	current_thread->wait_merge=NULL;
 	return current_thread->last_word;
 }
