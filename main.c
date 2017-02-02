@@ -22,7 +22,7 @@ int fun(int argument)
 
 int fun2()
 {
-	int t1_last_word=(int)lwt_join(t1);
+	int t1_last_word=(int)lwt_join(t0);
 	printf("thread %d woke up, get the last word %d from its waker\n",lwt_id(lwt_current()),t1_last_word);
 }
 
