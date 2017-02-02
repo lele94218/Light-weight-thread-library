@@ -30,6 +30,7 @@ int main()
 {
     t1 = lwt_create((void *) fun, (void *)12345);
 	t0 = lwt_current();
+
 	t2 = lwt_create((void *) fun2, NULL);
     int t1_last_word=(int)lwt_join(t1);
 	printf("main thread woke up, get the last word %d from its waker\n",t1_last_word);
