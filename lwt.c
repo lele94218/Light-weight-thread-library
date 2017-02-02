@@ -346,6 +346,11 @@ lwt_join(lwt_t * thread_to_wait)
 		printf("error: current thread is waiting for a dead thread");
 		return NULL;
 	}
+	else if(thread_to_wait==current_thread)
+	{
+		printf("error: a thread cannot join itself");
+		return NULL;
+	}
 	else if(thread_to_wait->merge_to!=NULL)
 	{
 		printf("error: cannot join a thread that is been reserved by others");
