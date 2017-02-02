@@ -27,9 +27,9 @@ int fun2()
 }
 
 int main()
-{	
-t0 = lwt_current();
+{
     t1 = lwt_create((void *) fun, (void *)12345);
+	t0 = lwt_current();
 
 	t2 = lwt_create((void *) fun2, NULL);
     int t1_last_word=(int)lwt_join(t1);
