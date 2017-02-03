@@ -12,6 +12,7 @@ int thread_initiated = 0;
 /* two queues, one for thread either waiting or running, one for recycling */
 linked_list * valid_queue;
 linked_list * recycle_queue;
+linked_list * zombie_queue;
 
 /* identify threads */
 lwt_t  current_thread;
@@ -26,6 +27,7 @@ lwt_t  __create_thread(int with_stack, lwt_fn_t fn, void * data);
 lwt_t  __reuse_thread(lwt_fn_t fn, void * data);
 void *__lwt_trampoline();
 static void __initiate(void);
+linked_list * __init_list();
 
 /* thread queue functions declarartion */
 lwt_t  __get_active_thread (linked_list * thread_queue);
@@ -268,19 +270,24 @@ __initiate()
 	thread_initiated = 1;
 	current_thread = __create_thread(0, (void *)NULL, NULL);
 	/* initialize valid_queue */
-	valid_queue=(linked_list *)malloc(sizeof(linked_list));
-	valid_queue->node_count=0;
-	valid_queue->head=NULL;
-	valid_queue->tail=NULL;
+	valid_queue=__init_list();
 	/* initialize recycle queue */
-	recycle_queue=(linked_list *)malloc(sizeof(linked_list));
-	recycle_queue->node_count=0;
-	recycle_queue->head=NULL;
-	recycle_queue->tail=NULL;
+	recycle_queue=__init_list();
+	/* initialize zombie_queue */
+	zombie_queue=__init_list();
 	__add_to_tail(current_thread,valid_queue);
 	#ifdef DEBUG
 	printf("initialization complete\n");
 	#endif
+}
+
+linked_list * __init_list()
+{
+	linked_list * list=(linked_list *)malloc(sizeof(linked_list));
+	list->node_count=0;
+	list->head=NULL;
+	list->tail=NULL;
+	return list;
 }
 
 /* create a thread, return its lwt_t pointer */
@@ -306,22 +313,31 @@ lwt_die(void * message)
 	printf("die function start executing for thread %d.\n",current_thread->lwt_id);
 	#endif
 	current_thread->last_word=message;
-	/* unlock the threads that are waiting to merge it */
+	/* if someone is waiting to join this one */
 	if (current_thread->merge_to)
 	{
 		current_thread->merge_to->status=LWT_INFO_NTHD_RUNNABLE;
 		current_thread->merge_to->last_word=message;
 		current_thread->merge_to=NULL;
+		current_thread->status=LWT_INFO_NTHD_ZOMBIES;
+		__remove_from_queue(current_thread, valid_queue);
+		__add_to_tail(current_thread, recycle_queue);
+		#ifdef DEBUG
+		printf("removed dead thread %d to recycle queue\n", current_thread->lwt_id);
+		#endif
+	}
+	/* nobody is currently waiting to join this one */
+	else
+	{
+		current_thread->status=LWT_INFO_NTHD_ZOMBIES;
+		__remove_from_queue(current_thread, valid_queue);
+		__add_to_tail(current_thread, zombie_queue);
+		#ifdef DEBUG
+		printf("removed dead thread %d to zombie queue\n", current_thread->lwt_id);
+		#endif
 	}
 
-	/* go die */
-	current_thread->status=LWT_INFO_NTHD_ZOMBIES;
-	__remove_from_queue(current_thread, valid_queue);
-	__add_to_tail(current_thread, recycle_queue);
-	#ifdef DEBUG
-	printf("removed dead thread %d from valid queue\n", current_thread->lwt_id);
-	#endif
-	/* pass flow to another thread */
+	/* go die, pass flow to another thread */
 	__lwt_schedule();
 }
 
@@ -391,7 +407,9 @@ lwt_join(lwt_t  thread_to_wait)
 		#ifdef DEBUG
 		printf("error: current thread is waiting for a dead thread\n");
 		#endif
-		return NULL;
+		__remove_from_queue(current_thread, zombie_queue);
+		__add_to_tail(current_thread, recycle_queue);
+		return thread_to_wait->last_word;
 	}
 	else if(thread_to_wait==current_thread)
 	{
@@ -418,7 +436,7 @@ lwt_join(lwt_t  thread_to_wait)
 	__add_to_tail(current_thread, valid_queue);
 	__lwt_schedule();
 	#ifdef DEBUG
-	printf("thread %d picked up dead threads %d's last word%d\n", current_thread->lwt_id, current_thread->wait_merge->lwt_id, (int)current_thread->last_word);
+	printf("thread %d picked up dead threads %d's last word %d\n", current_thread->lwt_id, current_thread->wait_merge->lwt_id, (int)current_thread->last_word);
 	#endif
 	current_thread->wait_merge=NULL;
 	return current_thread->last_word;
@@ -458,7 +476,7 @@ void
 print_living_thread_info()
 {
 	#ifdef DEBUG
-	printf("living thread info status shows as below:\n");
+	printf("there are %d living thread, status shows as below:\n", valid_queue->node_count);
 	#endif
 	lwt_t  current=valid_queue->head;
 	while(current!=NULL)
@@ -475,7 +493,7 @@ void
 print_dead_thread_info()
 {
 	#ifdef DEBUG
-	printf("dead thread info status shows as below:\n");
+	printf("there are %d dead thread, status shows as below:\n", recycle_queue->node_count);
 	#endif
 	lwt_t  current=recycle_queue->head;
 	while(current!=NULL)
@@ -491,7 +509,11 @@ print_dead_thread_info()
 int
 lwt_info(lwt_info_t t)
 {
+	if (t == LWT_INFO_NTHD_ZOMBIES)
+		return zombie_queue->node_count;	
+
 	int cnt = 0;
+	
 	lwt_t current = valid_queue->head;
 	while (current)
 	{
