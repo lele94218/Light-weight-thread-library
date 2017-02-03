@@ -89,33 +89,37 @@ __remove_from_queue(lwt_t  thread, linked_list * thread_queue)
 	while(tmp_thread)
 	{
 		if (tmp_thread==thread)
-			{
+		{
 			if(thread_queue->node_count==1)
-				{
+			{
 				thread_queue->head=NULL;
 				thread_queue->tail=NULL;
 				thread_queue->node_count--;
 				return 0;
-				}
+			}
 			if(thread_queue->head==tmp_thread)
-				{
+			{
 				thread_queue->head=tmp_thread->next;
-				tmp_thread->next->prev=NULL;
+				if (tmp_thread->next)
+					tmp_thread->next->prev=NULL;
 				thread_queue->node_count--;
 				return 0;
-				}
+			}
 			if(thread_queue->tail==tmp_thread)
-				{
+			{
 				thread_queue->tail=tmp_thread->prev;
-				tmp_thread->prev->next=NULL;
+				if (tmp_thread->prev)
+					tmp_thread->prev->next=NULL;
 				thread_queue->node_count--;
 				return 0;
-				}
-			tmp_thread->prev->next=tmp_thread->next;
-			tmp_thread->next->prev=tmp_thread->prev;
+			}
+			if (tmp_thread->prev)
+				tmp_thread->prev->next=tmp_thread->next;
+			if (tmp_thread->next)
+				tmp_thread->next->prev=tmp_thread->prev;
 			thread_queue->node_count--;
 			return 0;
-			}
+		}
 		tmp_thread=tmp_thread->next;
 	}
 	#ifdef DEBUG
