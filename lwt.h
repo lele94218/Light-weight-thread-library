@@ -1,7 +1,7 @@
 #ifndef LWT_H
 #define LWT_H
 
-#define DEBUG
+//#define DEBUG
 /* define size of stack for created thread */
 #define MAX_STACK_SIZE 2097152
 #define LWT_NULL NULL
@@ -82,5 +82,6 @@ int lwt_info(lwt_info_t t);
 /* test function declaration */
 void print_living_thread_info();
 void print_dead_thread_info();
+void print_zombie_thread_info();
 
 #endif

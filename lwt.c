@@ -405,10 +405,10 @@ lwt_join(lwt_t  thread_to_wait)
 	else if(thread_to_wait->status==LWT_INFO_NTHD_ZOMBIES)
 	{
 		#ifdef DEBUG
-		printf("error: current thread is waiting for a dead thread\n");
+		printf("current thread is collecting a zombie thread\n");
 		#endif
-		__remove_from_queue(current_thread, zombie_queue);
-		__add_to_tail(current_thread, recycle_queue);
+		__remove_from_queue(thread_to_wait, zombie_queue);
+		__add_to_tail(thread_to_wait, recycle_queue);
 		return thread_to_wait->last_word;
 	}
 	else if(thread_to_wait==current_thread)
@@ -500,6 +500,22 @@ print_dead_thread_info()
 	{
 		#ifdef DEBUG
 		printf("thread: %d in dead queue with status %d\n", current->lwt_id,current->status);
+		#endif
+		current=current->next;
+	}
+}
+
+void
+print_zombie_thread_info()
+{
+	#ifdef DEBUG
+	printf("there are %d zombie thread, status shows as below:\n", zombie_queue->node_count);
+	#endif
+	lwt_t  current=zombie_queue->head;
+	while(current!=NULL)
+	{
+		#ifdef DEBUG
+		printf("thread: %d in zombie queue with status %d\n", current->lwt_id,current->status);
 		#endif
 		current=current->next;
 	}

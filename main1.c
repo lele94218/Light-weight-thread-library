@@ -129,15 +129,14 @@ test_crt_join_sched(void)
 	/* functional tests: scheduling */
 	lwt_yield(LWT_NULL);
 	
-
 	chld1 = lwt_create(fn_sequence, (void*)1);
 	chld2 = lwt_create(fn_sequence, (void*)2);
 
-	//print_living_thread_info();
-	//print_dead_thread_info();
+
 
 	lwt_join(chld2);
-	lwt_join(chld1);	
+	lwt_join(chld1);
+	
 	IS_RESET();
 
 
@@ -154,7 +153,7 @@ test_crt_join_sched(void)
 	chld1 = lwt_create(fn_nested_joins, NULL);
 	lwt_join(chld1);
 	IS_RESET();
-	printf("so far so good 1!\n");
+
 	/* functional tests: join only from parents */
 	chld1 = lwt_create(fn_identity, (void*)0x37337);
 	chld2 = lwt_create(fn_join, chld1);
@@ -164,13 +163,13 @@ test_crt_join_sched(void)
 	//lwt_join(chld1);
 	IS_RESET();
 
-	printf("so far so good 2!\n");
+
 	/* functional tests: passing data between threads */
 	chld1 = lwt_create(fn_identity, (void*)0x37337);
 	assert((void*)0x37337 == lwt_join(chld1));
 	IS_RESET();
 
-	printf("so far so good 3!\n");
+
 	/* functional tests: directed yield */
 	chld1 = lwt_create(fn_null, NULL);
 	lwt_yield(chld1);
