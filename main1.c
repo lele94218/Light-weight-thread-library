@@ -6,7 +6,7 @@
 
 #define rdtscll(val) __asm__ __volatile__("rdtsc" : "=A" (val))
 
-#define ITER 5
+#define ITER 10000
 
 /* 
  * My output on an Intel Core i5-2520M CPU @ 2.50GHz:
@@ -122,7 +122,8 @@ test_crt_join_sched(void)
 {
 	lwt_t chld1, chld2;
 	print_living_thread_info();
-	print_dead_thread_info();
+	print_recycle_thread_info();
+	print_zombie_thread_info();
 
 	printf("[TEST] thread creation/join/scheduling\n");
 
