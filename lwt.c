@@ -184,6 +184,10 @@ __lwt_schedule ()
 {
 	old_thread=current_thread;
 	current_thread = __get_active_thread(valid_queue);
+	if (current_thread==old_thread)
+	{
+		return;
+	}
 	if (current_thread)
 	{
 		#ifdef DEBUG
@@ -235,6 +239,7 @@ lwt_t
 __reuse_thread(lwt_fn_t fn, void * data)
 {
 	lwt_t  reused_thread=recycle_queue->head;
+	__remove_from_queue(reused_thread, recycle_queue);
 	reused_thread->lwt_id = lwt_counter ++;
 	reused_thread->status = LWT_INFO_NTHD_RUNNABLE;
 	reused_thread->next=NULL;
@@ -384,7 +389,7 @@ lwt_join(lwt_t  thread_to_wait)
 	else if(thread_to_wait->status==LWT_INFO_NTHD_ZOMBIES)
 	{
 		#ifdef DEBUG
-		printf("error: current thread is waiting for a dead thread");
+		printf("error: current thread is waiting for a dead thread\n");
 		#endif
 		return NULL;
 	}
@@ -452,6 +457,9 @@ test_thread_queue()
 void
 print_living_thread_info()
 {
+	#ifdef DEBUG
+	printf("living thread info status shows as below:\n");
+	#endif
 	lwt_t  current=valid_queue->head;
 	while(current!=NULL)
 	{
@@ -460,7 +468,25 @@ print_living_thread_info()
 		#endif
 		current=current->next;
 	}
+	//printf("dead thread recycle queue contains %d items\n", recycle_queue->node_count);
 }
+
+void
+print_dead_thread_info()
+{
+	#ifdef DEBUG
+	printf("dead thread info status shows as below:\n");
+	#endif
+	lwt_t  current=recycle_queue->head;
+	while(current!=NULL)
+	{
+		#ifdef DEBUG
+		printf("thread: %d in dead queue with status %d\n", current->lwt_id,current->status);
+		#endif
+		current=current->next;
+	}
+}
+
 
 int
 lwt_info(lwt_info_t t)
