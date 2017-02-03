@@ -118,7 +118,9 @@ __remove_from_queue(lwt_t  thread, linked_list * thread_queue)
 			}
 		tmp_thread=tmp_thread->next;
 	}
+	#ifdef DEBUG
 	printf("thread to be removed not found!\n");
+	#endif
 	return -1;
 }
 
@@ -180,10 +182,18 @@ __lwt_schedule ()
 	current_thread = __get_active_thread(valid_queue);
 	if (current_thread)
 	{
+		#ifdef DEBUG
 		printf("thread %d start executing from reschedule\n", current_thread->lwt_id);
+		#endif
 		__lwt_dispatch(&old_thread->context, &current_thread->context);
 	}
-	else {printf("error in getting a valid thread from queue \n"); return;}
+	else 
+	{
+		#ifdef DEBUG
+		printf("error in getting a valid thread from queue \n");
+		#endif
+		return;
+	}
 }
 
 /* create and initialize a thread */
@@ -210,7 +220,9 @@ lwt_t  __create_thread(int with_stack, lwt_fn_t fn, void * data)
 		created_thread->context.sp = _sp;
     		created_thread->context.ip = (uint) __lwt_trampoline;
 	}
+	#ifdef DEBUG
 	printf("create thread %d complete\n", created_thread->lwt_id);
+	#endif
 	return created_thread;
 }
 
@@ -226,7 +238,9 @@ __reuse_thread(lwt_fn_t fn, void * data)
 	reused_thread->merge_to=NULL;
 	reused_thread->wait_merge=NULL;
 	reused_thread->last_word=NULL;
+	#ifdef DEBUG
 	printf("create thread %d from recycle\n", reused_thread->lwt_id);
+	#endif
 	uint _sp=reused_thread->init_sp;
 	_sp += (MAX_STACK_SIZE - sizeof(uint));
 	*((uint *)_sp) = (uint)data;
@@ -255,7 +269,9 @@ __initiate()
 	recycle_queue->head=NULL;
 	recycle_queue->tail=NULL;
 	__add_to_tail(current_thread,valid_queue);
+	#ifdef DEBUG
 	printf("initialization complete\n");
+	#endif
 }
 
 /* create a thread, return its lwt_t pointer */
@@ -266,12 +282,10 @@ lwt_create(lwt_fn_t fn, void * data)
 	lwt_t  next_thread;
 	/* decide if re-use from recycle queue */
 	next_thread=recycle_queue->node_count? __reuse_thread(fn, data) :__create_thread(1, fn, data);
+	#ifdef DEBUG
 	printf("thread: %d has created thread: %d\n", current_thread->lwt_id,next_thread->lwt_id);
+	#endif
 	__add_to_tail(next_thread,valid_queue);
-	/*old_thread=current_thread;
-	current_thread=next_thread;
-
-	__lwt_dispatch(&old_thread->context, &current_thread->context);*/
 	return next_thread;
 }
 
@@ -279,7 +293,9 @@ lwt_create(lwt_fn_t fn, void * data)
 void
 lwt_die(void * message)
 {
+	#ifdef DEBUG
 	printf("die function start executing for thread %d.\n",current_thread->lwt_id);
+	#endif
 	current_thread->last_word=message;
 	/* unlock the threads that are waiting to merge it */
 	if (current_thread->merge_to)
@@ -293,7 +309,9 @@ lwt_die(void * message)
 	current_thread->status=LWT_INFO_NTHD_ZOMBIES;
 	__remove_from_queue(current_thread, valid_queue);
 	__add_to_tail(current_thread, recycle_queue);
+	#ifdef DEBUG
 	printf("removed dead thread %d from valid queue\n", current_thread->lwt_id);
+	#endif
 	/* pass flow to another thread */
 	__lwt_schedule();
 }
@@ -303,7 +321,9 @@ void *
 __lwt_trampoline(lwt_fn_t fn, void * data)
 {
 	void * return_message=fn(data);
+	#ifdef DEBUG
 	printf("thread %d ready to die, with last word %d\n",current_thread->lwt_id,(int)return_message);
+	#endif
 	lwt_die(return_message);
 }
 
@@ -314,7 +334,9 @@ lwt_yield(lwt_t  strong_thread)
 	/* yield to NULL */
 	if (!strong_thread)
 	{
+		#ifdef DEBUG
 		printf("thread %d has yielded\n", current_thread->lwt_id);
+		#endif
 		__remove_from_queue(current_thread, valid_queue);
 		__add_to_tail(current_thread, valid_queue);
 		//print_thread_info();
@@ -323,12 +345,16 @@ lwt_yield(lwt_t  strong_thread)
 	}
 	if (strong_thread==current_thread)
 	{
+		#ifdef DEBUG
 		printf("thread %d is yielding to itself...\n",current_thread->lwt_id);
+		#endif
 		return 0;
 	}
 	if (strong_thread->status!=LWT_INFO_NTHD_RUNNABLE)
 	{
+		#ifdef DEBUG
 		printf("thread %d is yielding to a thread not runnable...\n",current_thread->lwt_id);
+		#endif
 		return 0;
 	}
 	__remove_from_queue(current_thread, valid_queue);
@@ -346,34 +372,45 @@ lwt_join(lwt_t  thread_to_wait)
 
 	if(thread_to_wait==NULL)
 	{
+		#ifdef DEBUG
 		printf("error: current thread is waiting for a thread does not exists");
+		#endif
 		return NULL;
 	}
 	else if(thread_to_wait->status==LWT_INFO_NTHD_ZOMBIES)
 	{
+		#ifdef DEBUG
 		printf("error: current thread is waiting for a dead thread");
+		#endif
 		return NULL;
 	}
 	else if(thread_to_wait==current_thread)
 	{
+		#ifdef DEBUG
 		printf("error: a thread cannot join itself");
+		#endif
 		return NULL;
 	}
 	else if(thread_to_wait->merge_to!=NULL)
 	{
+		#ifdef DEBUG
 		printf("error: cannot join a thread that is been reserved by others");
+		#endif
 		return NULL;
 	}
 	/* update both thread */
 	current_thread->wait_merge=thread_to_wait;
 	thread_to_wait->merge_to=current_thread;
-
+	#ifdef DEBUG
 	printf("thread %d blocked, waiting for thread %d to join\n", current_thread->lwt_id, thread_to_wait->lwt_id);
+	#endif
 	current_thread->status=LWT_INFO_NTHD_BLOCKED;
 	__remove_from_queue(current_thread, valid_queue);
 	__add_to_tail(current_thread, valid_queue);
 	__lwt_schedule();
+	#ifdef DEBUG
 	printf("thread %d picked up dead threads %d's last word%d\n", current_thread->lwt_id, current_thread->wait_merge->lwt_id, (int)current_thread->last_word);
+	#endif
 	current_thread->wait_merge=NULL;
 	return current_thread->last_word;
 }
@@ -400,7 +437,9 @@ test_thread_queue()
 	lwt_t  current=valid_queue->head;
 	while(current!=NULL)
 	{
+		#ifdef DEBUG
 		printf("thread queue id: %d\n", current->lwt_id);
+		#endif
 		current=current->next;
 	}
 }
@@ -412,7 +451,9 @@ print_living_thread_info()
 	lwt_t  current=valid_queue->head;
 	while(current!=NULL)
 	{
+		#ifdef DEBUG
 		printf("thread: %d in valid queue with status %d\n", current->lwt_id,current->status);
+		#endif
 		current=current->next;
 	}
 }

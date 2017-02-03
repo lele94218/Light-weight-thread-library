@@ -1,8 +1,10 @@
 #ifndef LWT_H
 #define LWT_H
 
+//#define DEBUG
 /* define size of stack for created thread */
 #define MAX_STACK_SIZE 2097152
+#define LWT_NULL NULL
 
 /* Data type redefinition */
 typedef unsigned int uint;
