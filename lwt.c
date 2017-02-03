@@ -299,7 +299,8 @@ lwt_die(void * message)
 }
 
 /* when thread ends from beginning function, extract return value and ready to kill the thread */
-void * __lwt_trampoline(lwt_fn_t fn, void * data)
+void * 
+__lwt_trampoline(lwt_fn_t fn, void * data)
 {
 	void * return_message=fn(data);
 	printf("thread %d ready to die, with last word %d\n",current_thread->lwt_id,(int)return_message);
@@ -310,22 +311,32 @@ void * __lwt_trampoline(lwt_fn_t fn, void * data)
 int
 lwt_yield(lwt_t  strong_thread)
 {
-	if (strong_thread&&strong_thread->status==LWT_INFO_NTHD_RUNNABLE)
+	/* yield to NULL */
+	if (!strong_thread)
 	{
-		printf("thread %d has yielded to thread %d\n", current_thread->lwt_id,strong_thread->lwt_id);
+		printf("thread %d has yielded\n", current_thread->lwt_id);
 		__remove_from_queue(current_thread, valid_queue);
 		__add_to_tail(current_thread, valid_queue);
-		__remove_from_queue(strong_thread, valid_queue);
-		__add_to_head(strong_thread, valid_queue);
+		//print_thread_info();
 		__lwt_schedule();
 		return 0;
 	}
-	printf("thread %d has yielded\n", current_thread->lwt_id);
+	if (strong_thread==current_thread)
+	{
+		printf("thread %d is yielding to itself...\n",current_thread->lwt_id);
+		return 0;
+	}
+	if (strong_thread->status!=LWT_INFO_NTHD_RUNNABLE)
+	{
+		printf("thread %d is yielding to a thread not runnable...\n",current_thread->lwt_id);
+		return 0;
+	}
 	__remove_from_queue(current_thread, valid_queue);
 	__add_to_tail(current_thread, valid_queue);
-	//print_thread_info();
+	__remove_from_queue(strong_thread, valid_queue);
+	__add_to_head(strong_thread, valid_queue);
 	__lwt_schedule();
-	return 1;
+	return 0;
 }
 
 /* blocked and wait for the argument thread, when argument thread ends, resume execution and return message from the dead thread */
