@@ -150,7 +150,7 @@ __lwt_schedule ()
 }
 
 /* create and initialize a thread */
-lwt_t  __create_thread(int with_stack, lwt_fn_t fn, void * data)
+lwt_t __create_thread(int with_stack, lwt_fn_t fn, void * data)
 {
 	lwt_t  created_thread=(lwt_t) malloc (sizeof(struct _lwt_t));
 	created_thread->lwt_id = lwt_counter ++;
@@ -333,34 +333,10 @@ lwt_yield(lwt_t strong_thread)
 	__add_to_tail(current_thread, valid_queue);
 	__remove_from_queue(strong_thread, valid_queue);
 	__add_to_head(strong_thread, valid_queue);
-/*	__remove_from_queue(strong_thread, valid_queue);
-	__add_to_tail(strong_thread, valid_queue);
-
-	if (current_thread->prev)
-		current_thread->prev->next = strong_thread;
-	if (current_thread->next)
-		current_thread->next->prev = strong_thread;
-	if (strong_thread->prev)
-		strong_thread->prev->next = current_thread;
-	if (strong_thread->next)	
-		strong_thread->next->prev = current_thread;
-
-	lwt_t cur_prev = current_thread->prev;
-	if (cur_prev && strong_thread->prev)
-	{
-		current_thread->prev = strong_thread->prev;
-		strong_thread->prev = cur_prev;
-	}
-
-	lwt_t cur_next = current_thread->next;
-	if (cur_next && strong_thread->next)
-	{
-		current_thread->next = strong_thread->next;
-		strong_thread->next = cur_next;
-	
-	}
-*/
-	__lwt_schedule();
+	//__lwt_schedule();
+	old_thread = current_thread;
+	current_thread = strong_thread;
+	__lwt_dispatch(&old_thread->context, &current_thread->context);
 	return 0;
 }
 
