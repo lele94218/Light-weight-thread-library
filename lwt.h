@@ -77,6 +77,7 @@ linked_list;
 
 /* Funciton declaration */
 lwt_t  lwt_create(lwt_fn_t fn, void * data);
+void __lwt_dispatch(lwt_context *curr, lwt_context *next);
 void * lwt_join(lwt_t  thread_to_wait);
 void lwt_die(void *);
 int lwt_yield(lwt_t  strong_thread);
