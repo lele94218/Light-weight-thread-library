@@ -126,10 +126,10 @@ inline void __lwt_dispatch(lwt_context *curr, lwt_context *next)
 	__asm__ __volatile__
 	(
 		"movl %%esp,%0;"
-		"movl $thisAmark%=,%1;"
+		"movl $retDispatch%=,%1;"
 		"movl %2,%%esp;"
 		"jmp *%3;"
-		"thisAmark%=:;"
+		"retDispatch%=:;"
 		:"=m" (curr->sp),"=m" (curr->ip)
 		:"m"(next->sp),"m" (next->ip)
 		:
