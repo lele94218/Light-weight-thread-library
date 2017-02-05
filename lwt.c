@@ -20,11 +20,7 @@ lwt_t  old_thread;
 
 /* internal function declaration, below functions are only used internally */
 /* functions for thread operation */
-<<<<<<< HEAD
 inline void __lwt_dispatch(lwt_context *curr, lwt_context *next);
-=======
-//void __lwt_dispatch(lwt_context *curr, lwt_context *next);
->>>>>>> a9a8dc27a15d13c8624810ef6e59087b1d8a5674
 void __lwt_schedule (void);
 lwt_t  __create_thread(int with_stack, lwt_fn_t fn, void * data);
 lwt_t  __reuse_thread(lwt_fn_t fn, void * data);
@@ -53,9 +49,9 @@ __add_to_tail (lwt_t thread, linked_list * thread_queue)
 
 	else
 	{
-	thread_queue->tail->next = thread;
-	thread->prev = thread_queue->tail;
-	thread_queue->tail = thread;
+		thread_queue->tail->next = thread;
+		thread->prev = thread_queue->tail;
+		thread_queue->tail = thread;
 	}
 
 	++ thread_queue->node_count;
@@ -77,9 +73,9 @@ __add_to_head (lwt_t  thread, linked_list * thread_queue)
 
 	else
 	{
-	thread_queue->head->prev = thread;
-	thread->next = thread_queue->head;
-	thread_queue->head = thread;
+		thread_queue->head->prev = thread;
+		thread->next = thread_queue->head;
+		thread_queue->head = thread;
 	}
 
 	++ thread_queue->node_count;
@@ -90,29 +86,27 @@ __add_to_head (lwt_t  thread, linked_list * thread_queue)
 int
 __remove_from_queue(lwt_t p_thread, linked_list * list)
 {
- 	if (!p_thread) return -1;
+	if (!p_thread) return -1;
     
     
-    /* Remove from run queue */
-    if (p_thread == list->head)
-    {
-        if (p_thread->next)
-            p_thread->next->prev = NULL;
-        list->head = p_thread->next;
-    }
-    else if (p_thread == list->tail)
-    {
-        if (p_thread->prev)
-            p_thread->prev->next = NULL;
-        list->tail = p_thread->prev;
-    }
-    else
-    {
-        p_thread->prev->next = p_thread->next;
-        p_thread->next->prev = p_thread->prev;
-    }
+	/* Remove from run queue */
+	if (p_thread == list->head)
+	{
+		if (p_thread->next){p_thread->next->prev = NULL;}
+		list->head = p_thread->next;
+	}
+	else if (p_thread == list->tail)
+	{
+		if (p_thread->prev){p_thread->prev->next = NULL;}
+		list->tail = p_thread->prev;
+	}
+	else
+	{
+		p_thread->prev->next = p_thread->next;
+		p_thread->next->prev = p_thread->prev;
+	}
     
-    list->node_count --;
+	list->node_count --;
 }
 
 /* get a thread that is with highest priority (at the head of queue). */
