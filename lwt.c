@@ -20,7 +20,7 @@ lwt_t  old_thread;
 
 /* internal function declaration, below functions are only used internally */
 /* functions for thread operation */
-void __lwt_dispatch(lwt_context *curr, lwt_context *next);
+inline void __lwt_dispatch(lwt_context *curr, lwt_context *next);
 void __lwt_schedule (void);
 lwt_t  __create_thread(int with_stack, lwt_fn_t fn, void * data);
 lwt_t  __reuse_thread(lwt_fn_t fn, void * data);
@@ -147,37 +147,19 @@ __get_active_thread (linked_list * thread_queue)
 }
 
 /* pause one thread, start executing the next one */
-void __lwt_dispatch(lwt_context *curr, lwt_context *next)
+inline void __lwt_dispatch(lwt_context *curr, lwt_context *next)
 {
-__asm__ __volatile
+	__asm__ __volatile__
 	(
-	//"push %edi\n\t"
-        //"push %esi\n\t"
-	//"push %ebx\n\t"
-	"mov 0xc(%ebp),%eax\n\t"
-	"mov 0x4(%eax),%ecx\n\t"
-	"mov (%eax),%edx\n\t"
-	"mov 0x8(%ebp),%eax\n\t"
-	"add $0x4,%eax\n\t"
-	"mov 0x8(%ebp),%ebx\n\t"
-	"push %ebp\n\t"
-	//"push %eax\n\t"
-	"push %ebx\n\t"
-	//"push %ecx\n\t"
-	//"push %edx\n\t"
-	"mov %esp,(%eax)\n\t"
-	"movl $return,(%ebx)\n\t"
-	"mov %ecx,%esp\n\t"
-	"jmp *%edx\n\t"
-	//"return: pop %edx\n\t"
-	//"pop %ecx\n\t"
-	"return: pop %ebx\n\t"
-	//"pop %eax\n\t"
-	"pop %ebp\n\t"
-	//"pop %ebx\n\t"
-	//"pop %esi\n\t"
-	//"pop %edi\n\t"
-	);
+		"movl %%esp,%0;"
+		"movl $thisAmark%=,%1;"
+		"movl %2,%%esp;"
+		"jmp *%3;"
+		"thisAmark%=:;"
+		:"=m" (curr->sp),"=m" (curr->ip)
+		:"m"(next->sp),"m" (next->ip)
+		:
+		);
 }
 
 /* find one proper thread to execute from pool */
@@ -192,11 +174,13 @@ __lwt_schedule ()
 		printf("thread %d start executing from reschedule\n", current_thread->lwt_id);
 		#endif
 		__lwt_dispatch(&old_thread->context, &current_thread->context);
+		return;
 	}
-	else 
+	else
 	{
+		current_thread=old_thread;
 		#ifdef DEBUG
-		printf("error in getting a valid thread from queue \n");
+		printf("thread %d cannot find a valid thread to dispatch, keep executing\n",current_thread->lwt_id);
 		#endif
 		return;
 	}
@@ -299,7 +283,6 @@ lwt_create(lwt_fn_t fn, void * data)
 	printf("thread: %d has created thread: %d\n", current_thread->lwt_id,next_thread->lwt_id);
 	#endif
 	__add_to_tail(next_thread,valid_queue);
-	__lwt_schedule();
 	return next_thread;
 }
 
