@@ -123,6 +123,7 @@ __get_active_thread (linked_list * thread_queue)
 /* pause one thread, start executing the next one */
 inline void __lwt_dispatch(lwt_context *curr, lwt_context *next)
 {
+#ifndef SAFE_MODE
 	__asm__ __volatile__
 	(
 		"movl %%esp,%0;"
@@ -134,6 +135,25 @@ inline void __lwt_dispatch(lwt_context *curr, lwt_context *next)
 		:"m"(next->sp),"m" (next->ip)
 		:
 		);
+#endif
+#ifdef SAFE_MODE
+	__asm__ __volatile__
+	(
+		"push %%ebx;"
+		"push %%esi;"
+		"push %%edi;"
+		"movl %%esp,%0;"
+		"movl $retDispatch%=,%1;"
+		"movl %2,%%esp;"
+		"jmp *%3;"
+		"retDispatch%=:pop %%edi;"
+		"pop %%esi;"
+		"pop %%ebx;"
+		:"=m" (curr->sp),"=m" (curr->ip)
+		:"m"(next->sp),"m" (next->ip)
+		:
+		);
+#endif
 }
 
 /* find one proper thread to execute from pool */
