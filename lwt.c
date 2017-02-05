@@ -20,7 +20,11 @@ lwt_t  old_thread;
 
 /* internal function declaration, below functions are only used internally */
 /* functions for thread operation */
+<<<<<<< HEAD
 inline void __lwt_dispatch(lwt_context *curr, lwt_context *next);
+=======
+//void __lwt_dispatch(lwt_context *curr, lwt_context *next);
+>>>>>>> a9a8dc27a15d13c8624810ef6e59087b1d8a5674
 void __lwt_schedule (void);
 lwt_t  __create_thread(int with_stack, lwt_fn_t fn, void * data);
 lwt_t  __reuse_thread(lwt_fn_t fn, void * data);
@@ -32,11 +36,11 @@ linked_list * __init_list();
 lwt_t  __get_active_thread (linked_list * thread_queue);
 int __add_to_tail(lwt_t  thread, linked_list * thread_queue);
 int __add_to_head(lwt_t  thread, linked_list * thread_queue);
-int __remove_from_queue(lwt_t  thread, linked_list * thread_queue);
+int __remove_from_queue(lwt_t, linked_list *);
 
 /* add a thread to tail of a thread queue */
 int
-__add_to_tail (lwt_t  thread, linked_list * thread_queue)
+__add_to_tail (lwt_t thread, linked_list * thread_queue)
 {
 	thread->next = NULL;
 	thread->prev = NULL;
@@ -84,50 +88,31 @@ __add_to_head (lwt_t  thread, linked_list * thread_queue)
 
 /* remove a thread from a queue */
 int
-__remove_from_queue(lwt_t  thread, linked_list * thread_queue)
+__remove_from_queue(lwt_t p_thread, linked_list * list)
 {
-	lwt_t  tmp_thread=thread_queue->head;
-	if (thread_queue->node_count==0) return -1;
-	while(tmp_thread)
-	{
-		if (tmp_thread==thread)
-		{
-			if(thread_queue->node_count==1)
-			{
-				thread_queue->head=NULL;
-				thread_queue->tail=NULL;
-				thread_queue->node_count--;
-				return 0;
-			}
-			if(thread_queue->head==tmp_thread)
-			{
-				thread_queue->head=tmp_thread->next;
-				if (tmp_thread->next)
-					tmp_thread->next->prev=NULL;
-				thread_queue->node_count--;
-				return 0;
-			}
-			if(thread_queue->tail==tmp_thread)
-			{
-				thread_queue->tail=tmp_thread->prev;
-				if (tmp_thread->prev)
-					tmp_thread->prev->next=NULL;
-				thread_queue->node_count--;
-				return 0;
-			}
-			if (tmp_thread->prev)
-				tmp_thread->prev->next=tmp_thread->next;
-			if (tmp_thread->next)
-				tmp_thread->next->prev=tmp_thread->prev;
-			thread_queue->node_count--;
-			return 0;
-		}
-		tmp_thread=tmp_thread->next;
-	}
-	#ifdef DEBUG
-	printf("thread to be removed not found!\n");
-	#endif
-	return -1;
+ 	if (!p_thread) return -1;
+    
+    
+    /* Remove from run queue */
+    if (p_thread == list->head)
+    {
+        if (p_thread->next)
+            p_thread->next->prev = NULL;
+        list->head = p_thread->next;
+    }
+    else if (p_thread == list->tail)
+    {
+        if (p_thread->prev)
+            p_thread->prev->next = NULL;
+        list->tail = p_thread->prev;
+    }
+    else
+    {
+        p_thread->prev->next = p_thread->next;
+        p_thread->next->prev = p_thread->prev;
+    }
+    
+    list->node_count --;
 }
 
 /* get a thread that is with highest priority (at the head of queue). */
@@ -187,22 +172,22 @@ __lwt_schedule ()
 }
 
 /* create and initialize a thread */
-lwt_t  __create_thread(int with_stack, lwt_fn_t fn, void * data)
+lwt_t __create_thread(int with_stack, lwt_fn_t fn, void * data)
 {
 	lwt_t  created_thread=(lwt_t) malloc (sizeof(struct _lwt_t));
 	created_thread->lwt_id = lwt_counter ++;
 	created_thread->status = LWT_INFO_NTHD_RUNNABLE;
-	created_thread->next=NULL;
-	created_thread->prev=NULL;
-	created_thread->merge_to=NULL;
-	created_thread->wait_merge=NULL;
-	created_thread->last_word=NULL;
+	created_thread->next = NULL;
+	created_thread->prev = NULL;
+	created_thread->merge_to = NULL;
+	created_thread->wait_merge = NULL;
+	created_thread->last_word = NULL;
 	/* create a stack for the thread */
 	if (with_stack)
 	{
 		/* init stack with die function */
     		uint _sp = (uint) malloc(MAX_STACK_SIZE);
-		created_thread->init_sp=_sp;
+		created_thread->init_sp = _sp;
     		_sp += (MAX_STACK_SIZE - sizeof(uint));
     		*((uint *)_sp) = (uint)data;
     		_sp -= (sizeof(uint));
@@ -221,15 +206,15 @@ lwt_t  __create_thread(int with_stack, lwt_fn_t fn, void * data)
 lwt_t 
 __reuse_thread(lwt_fn_t fn, void * data)
 {
-	lwt_t  reused_thread=recycle_queue->head;
+	lwt_t reused_thread=recycle_queue->head;
 	__remove_from_queue(reused_thread, recycle_queue);
 	reused_thread->lwt_id = lwt_counter ++;
 	reused_thread->status = LWT_INFO_NTHD_RUNNABLE;
-	reused_thread->next=NULL;
-	reused_thread->prev=NULL;
-	reused_thread->merge_to=NULL;
-	reused_thread->wait_merge=NULL;
-	reused_thread->last_word=NULL;
+	reused_thread->next = NULL;
+	reused_thread->prev = NULL;
+	reused_thread->merge_to = NULL;
+	reused_thread->wait_merge = NULL;
+	reused_thread->last_word = NULL;
 	#ifdef DEBUG
 	printf("create thread %d from recycle\n", reused_thread->lwt_id);
 	#endif
@@ -335,7 +320,7 @@ __lwt_trampoline(lwt_fn_t fn, void * data)
 
 /* put the thread to run queue end, allow others to execute, if argument has a value, yield to a specific thread */
 int
-lwt_yield(lwt_t  strong_thread)
+lwt_yield(lwt_t strong_thread)
 {
 	/* yield to NULL */
 	if (!strong_thread)
@@ -369,7 +354,10 @@ lwt_yield(lwt_t  strong_thread)
 	__add_to_tail(current_thread, valid_queue);
 	__remove_from_queue(strong_thread, valid_queue);
 	__add_to_head(strong_thread, valid_queue);
-	__lwt_schedule();
+	//__lwt_schedule();
+	old_thread = current_thread;
+	current_thread = strong_thread;
+	__lwt_dispatch(&old_thread->context, &current_thread->context);
 	return 0;
 }
 
