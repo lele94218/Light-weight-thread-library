@@ -1,8 +1,13 @@
 #ifndef LWT_H
 #define LWT_H
 
-/* de-comment this line to enable debug mode */
-//#define DEBUG
+
+/* turn this on will enable error check for user input */
+//#define SAFE_MODE
+
+/* turn this on will display thread running information */
+//#define DEBUG_MODE
+
 
 /* define size of stack for created thread */
 #define MAX_STACK_SIZE 2097152
