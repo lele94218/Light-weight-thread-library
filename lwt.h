@@ -59,13 +59,13 @@ typedef struct _lwt_t
 	/* thread regarding join and wait */
 	struct _lwt_t * merge_to;
 	struct _lwt_t * wait_merge;
-	
+
 	/* initial stack memory pointer, lowest address */
 	unsigned int init_sp;
 
 	/* return value */
 	void * last_word;
-    
+
 	/* Thread context */
 	lwt_context context;
 }
