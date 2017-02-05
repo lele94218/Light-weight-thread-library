@@ -158,17 +158,6 @@ __lwt_schedule ()
 		printf("thread %d start executing from reschedule\n", current_thread->lwt_id);
 		#endif
 		__lwt_dispatch(&old_thread->context, &current_thread->context);
-		/*__asm__ __volatile__
-		(
-			"movl %%esp,%0;"
-			"movl $thisAmark%=,%1;"
-			"movl %2,%%esp;"
-			"jmp *%3;"
-			"thisAmark%=:;"
-			:"=m" (old_thread->context.sp),"=m" (old_thread->context.ip)
-			:"m"(current_thread->context.sp),"m" (current_thread->context.ip)
-			:
-		);*/
 		return;
 	}
 	else
@@ -259,10 +248,10 @@ __initiate()
 
 linked_list * __init_list()
 {
-	linked_list * list=(linked_list *)malloc(sizeof(linked_list));
-	list->node_count=0;
-	list->head=NULL;
-	list->tail=NULL;
+	linked_list * list = (linked_list *)malloc(sizeof(linked_list));
+	list->node_count = 0;
+	list->head = NULL;
+	list->tail = NULL;
 	return list;
 }
 
@@ -292,10 +281,10 @@ lwt_die(void * message)
 	/* if someone is waiting to join this one, return and go to recycle queue */
 	if (current_thread->merge_to)
 	{
-		current_thread->merge_to->status=LWT_INFO_NTHD_RUNNABLE;
-		current_thread->merge_to->last_word=message;
-		current_thread->merge_to=NULL;
-		current_thread->status=LWT_INFO_NTHD_ZOMBIES;
+		current_thread->merge_to->status = LWT_INFO_NTHD_RUNNABLE;
+		current_thread->merge_to->last_word = message;
+		current_thread->merge_to = NULL;
+		current_thread->status = LWT_INFO_NTHD_ZOMBIES;
 		__remove_from_queue(current_thread, valid_queue);
 		__add_to_tail(current_thread, recycle_queue);
 		#ifdef DEBUG_MODE
@@ -305,7 +294,7 @@ lwt_die(void * message)
 	/* nobody is currently waiting to join this one, becomes a zombie */
 	else
 	{
-		current_thread->status=LWT_INFO_NTHD_ZOMBIES;
+		current_thread->status = LWT_INFO_NTHD_ZOMBIES;
 		__remove_from_queue(current_thread, valid_queue);
 		__add_to_tail(current_thread, zombie_queue);
 		#ifdef DEBUG_MODE
@@ -321,9 +310,9 @@ lwt_die(void * message)
 void * 
 __lwt_trampoline(lwt_fn_t fn, void * data)
 {
-	void * return_message=fn(data);
+	void * return_message = fn(data);
 	#ifdef DEBUG_MODE
-	printf("thread %d ready to die, with last word %d\n",current_thread->lwt_id,(int)return_message);
+	printf("thread %d ready to die, with last word %d\n", current_thread->lwt_id,(int)return_message);
 	#endif
 	lwt_die(return_message);
 }
@@ -340,13 +329,12 @@ lwt_yield(lwt_t strong_thread)
 		#endif
 		__remove_from_queue(current_thread, valid_queue);
 		__add_to_tail(current_thread, valid_queue);
-		//print_thread_info();
 		__lwt_schedule();
 		return 0;
 	}
 	#ifdef SAFE_MODE
 	/* yield to itself */
-	if (strong_thread==current_thread)
+	if (strong_thread == current_thread)
 	{
 		#ifdef DEBUG_MODE
 		printf("thread %d is yielding to itself...\n",current_thread->lwt_id);
@@ -354,7 +342,7 @@ lwt_yield(lwt_t strong_thread)
 		return 0;
 	}
 	/* yield to something not runnable */
-	if (strong_thread->status!=LWT_INFO_NTHD_RUNNABLE)
+	if (strong_thread->status != LWT_INFO_NTHD_RUNNABLE)
 	{
 		#ifdef DEBUG_MODE
 		printf("thread %d is yielding to a thread not runnable...\n",current_thread->lwt_id);
@@ -375,21 +363,21 @@ void *
 lwt_join(lwt_t  thread_to_wait)
 {
 	#ifdef SAFE_MODE
-	if(thread_to_wait==NULL)
+	if(thread_to_wait == NULL)
 	{
 		#ifdef DEBUG_MODE
 		printf("error: current thread is waiting for a thread does not exists");
 		#endif
 		return NULL;
 	}
-	else if(thread_to_wait==current_thread)
+	else if(thread_to_wait == current_thread)
 	{
 		#ifdef DEBUG_MODE
 		printf("error: a thread cannot join itself");
 		#endif
 		return NULL;
 	}
-	else if(thread_to_wait->merge_to!=NULL)
+	else if(thread_to_wait->merge_to != NULL)
 	{
 		#ifdef DEBUG_MODE
 		printf("error: cannot join a thread that is been reserved by others");
@@ -397,7 +385,7 @@ lwt_join(lwt_t  thread_to_wait)
 		return NULL;
 	}
 	#endif
-	if(thread_to_wait->status==LWT_INFO_NTHD_ZOMBIES)
+	if(thread_to_wait->status == LWT_INFO_NTHD_ZOMBIES)
 	{
 		#ifdef DEBUG_MODE
 		printf("current thread is collecting a zombie thread\n");
@@ -407,19 +395,19 @@ lwt_join(lwt_t  thread_to_wait)
 		return thread_to_wait->last_word;
 	}
 	/* update both thread */
-	current_thread->wait_merge=thread_to_wait;
-	thread_to_wait->merge_to=current_thread;
+	current_thread->wait_merge = thread_to_wait;
+	thread_to_wait->merge_to = current_thread;
 	#ifdef DEBUG_MODE
 	printf("thread %d blocked, waiting for thread %d to join\n", current_thread->lwt_id, thread_to_wait->lwt_id);
 	#endif
-	current_thread->status=LWT_INFO_NTHD_BLOCKED;
+	current_thread->status = LWT_INFO_NTHD_BLOCKED;
 	__remove_from_queue(current_thread, valid_queue);
 	__add_to_tail(current_thread, valid_queue);
 	__lwt_schedule();
 	#ifdef DEBUG_MODE
 	printf("thread %d picked up dead threads %d's last word %d\n", current_thread->lwt_id, current_thread->wait_merge->lwt_id, (int)current_thread->last_word);
 	#endif
-	current_thread->wait_merge=NULL;
+	current_thread->wait_merge = NULL;
 	return current_thread->last_word;
 }
 
@@ -433,48 +421,9 @@ lwt_current()
 
 /* return the id of a thread */
 int
-lwt_id(lwt_t  input_thread)
+lwt_id(lwt_t input_thread)
 {
 	return current_thread->lwt_id;
-}
-
-/* test function, out put the living thread queue and its thread status */
-void
-print_living_thread_info()
-{
-	printf("there are %d living thread, status shows as below:\n", valid_queue->node_count);
-	lwt_t  current=valid_queue->head;
-	while(current!=NULL)
-	{
-		printf("thread: %d with status %d\n", current->lwt_id,current->status);
-		current=current->next;
-	}
-}
-
-/* test function, out put the recycle queue and its thread status */
-void
-print_recycle_thread_info()
-{
-	printf("there are %d dead thread in recycle, status shows as below:\n", recycle_queue->node_count);
-	lwt_t  current=recycle_queue->head;
-	while(current!=NULL)
-	{
-		printf("thread: %d in recycle queue with status %d\n", current->lwt_id,current->status);
-		current=current->next;
-	}
-}
-
-/* test function, out put the zombie queue and its thread status */
-void
-print_zombie_thread_info()
-{
-	printf("there are %d zombie thread, status shows as below:\n", zombie_queue->node_count);
-	lwt_t  current=zombie_queue->head;
-	while(current!=NULL)
-	{
-		printf("thread: %d in zombie queue with status %d\n", current->lwt_id,current->status);
-		current=current->next;
-	}
 }
 
 int
