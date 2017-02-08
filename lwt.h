@@ -16,12 +16,16 @@
 
 /* define NULL pointer */
 #define LWT_NULL NULL
+#define LWT_STAT_RUNNABLE = 0;
+#define LWT_STAT_BLOCKED = 1;
+#define LWT_STAT_ZOMBIES = 2;
 
 /* Data type redefinition */
 typedef unsigned int uint;
 typedef unsigned short ushort;
 typedef unsigned char uchar;
 typedef int t_id;
+typedef int t_stat;
 
 /* define a function pointer */
 typedef void * (*lwt_fn_t)(void *);
@@ -30,7 +34,7 @@ typedef void * (*lwt_fn_t)(void *);
 typedef enum _lwt_info_t
 {
     /* The thread is running. */
-    LWT_INFO_NTHD_RUNNABLE,
+    LWT_INFO_NTHD_RUNNABLE = 0,
     /* The thread is blocked. */
     LWT_INFO_NTHD_BLOCKED,
     /* This is a zombie thread. */
@@ -61,7 +65,7 @@ typedef struct _lwt_t
     t_id lwt_id;
     
     /* the status of a thread */
-    lwt_info_t status;
+    t_stat status;
     
     /* thread regarding join */
     struct _lwt_t * merge_to;
