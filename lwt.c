@@ -100,7 +100,6 @@ __lwt_dispatch(lwt_context * curr, lwt_context * next)
 {
     __asm__ __volatile__
     (
-     
      "movl %%esp,%0;"
      "movl $retDispatch%=,%1;"
      "movl %2,%%esp;"
