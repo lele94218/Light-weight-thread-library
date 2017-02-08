@@ -24,7 +24,7 @@ inline void __lwt_dispatch(lwt_context *curr, lwt_context *next);
 void __lwt_schedule (void);
 lwt_t  __create_thread(int with_stack, lwt_fn_t fn, void * data);
 void __init_thread(lwt_t created_thread);
-void __init_stack(uint _sp, lwt_fn_t fn, void * data);
+void __init_stack(lwt_t thread, lwt_fn_t fn, void * data);
 lwt_t  __reuse_thread(lwt_fn_t fn, void * data);
 void *__lwt_trampoline();
 void __initiate(void);
@@ -181,15 +181,8 @@ lwt_t __create_thread(int with_stack, lwt_fn_t fn, void * data)
 	if (with_stack)
 	{
 		/* init stack with die function */
-		uint _sp = (uint) malloc(MAX_STACK_SIZE);
-		created_thread->init_sp = _sp;
-		_sp += (MAX_STACK_SIZE - sizeof(uint));
-		*((uint *)_sp) = (uint)data;
-		_sp -= (sizeof(uint));
-		*((uint *)_sp) = (uint)fn;
-		_sp -= (sizeof(uint));
-		created_thread->context.sp = _sp;
-		created_thread->context.ip = (uint) __lwt_trampoline;
+		created_thread->init_sp= (uint) malloc(MAX_STACK_SIZE);
+		__init_stack(created_thread, fn, data);
 	}
 #ifdef DEBUG_MODE
 	printf("create thread %d complete\n", created_thread->lwt_id);
@@ -207,14 +200,7 @@ __reuse_thread(lwt_fn_t fn, void * data)
 #ifdef DEBUG_MODE
 	printf("create thread %d from recycle\n", reused_thread->lwt_id);
 #endif
-	uint _sp=reused_thread->init_sp;
-	_sp += (MAX_STACK_SIZE - sizeof(uint));
-	*((uint *)_sp) = (uint)data;
-	_sp -= (sizeof(uint));
-	*((uint *)_sp) = (uint)fn;
-	_sp -= (sizeof(uint));
-	reused_thread->context.sp = _sp;
-	reused_thread->context.ip = (uint) __lwt_trampoline;
+	__init_stack(reused_thread, fn, data);
 	return reused_thread;
 }
 
@@ -228,6 +214,18 @@ void __init_thread(lwt_t created_thread)
 	created_thread->merge_to = NULL;
 	created_thread->wait_merge = NULL;
 	created_thread->last_word = NULL;
+}
+
+/* init a stack */
+void __init_stack(lwt_t thread, lwt_fn_t fn, void * data)
+{
+	thread->context.sp = thread->init_sp;
+	thread->context.sp += (MAX_STACK_SIZE - sizeof(uint));
+	*((uint *)thread->context.sp) = (uint)data;
+	thread->context.sp -= (sizeof(uint));
+	*((uint *)thread->context.sp) = (uint)fn;
+	thread->context.sp -= (sizeof(uint));
+	thread->context.ip = (uint) __lwt_trampoline;
 }
 
 
