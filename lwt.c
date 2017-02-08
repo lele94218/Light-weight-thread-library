@@ -63,6 +63,8 @@ lwt_t old_thread;
 inline void __lwt_dispatch(lwt_context *curr, lwt_context *next);
 void __lwt_schedule (void);
 lwt_t  __create_thread(int with_stack, lwt_fn_t fn, void * data);
+void __init_thread(lwt_t created_thread);
+void __init_stack(lwt_t thread, lwt_fn_t fn, void * data);
 lwt_t  __reuse_thread(lwt_fn_t fn, void * data);
 void *__lwt_trampoline();
 void __initiate(void);
@@ -202,6 +204,31 @@ __reuse_thread(lwt_fn_t fn, void * data)
     reused_thread->context.ip = (uint) __lwt_trampoline;
     return reused_thread;
 }
+
+/* init a struct of lwt */
+void __init_thread(lwt_t created_thread)
+{
+	created_thread->lwt_id = lwt_counter ++;
+	created_thread->status = LWT_INFO_NTHD_RUNNABLE;
+	created_thread->next = NULL;
+	created_thread->prev = NULL;
+	created_thread->merge_to = NULL;
+	created_thread->wait_merge = NULL;
+	created_thread->last_word = NULL;
+}
+
+/* init a stack */
+void __init_stack(lwt_t thread, lwt_fn_t fn, void * data)
+{
+	thread->context.sp = thread->init_sp;
+	thread->context.sp += (MAX_STACK_SIZE - sizeof(uint));
+	*((uint *)thread->context.sp) = (uint)data;
+	thread->context.sp -= (sizeof(uint));
+	*((uint *)thread->context.sp) = (uint)fn;
+	thread->context.sp -= (sizeof(uint));
+	thread->context.ip = (uint) __lwt_trampoline;
+}
+
 
 /* initialize main thread and the queues when user called create at first time */
 void
@@ -456,3 +483,4 @@ print_thread()
         cur = cur->next;
     }
 }
+
