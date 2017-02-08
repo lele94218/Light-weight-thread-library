@@ -6,7 +6,13 @@
 #define SAFE_MODE
 
 /* turn this on will display thread running information */
-//#define DEBUG_MODE
+//#define __DEBUG__
+#ifdef __DEBUG__
+//#define DEBUG(format,...) printf("File: "__FILE__", Line: %05d: "format"/n", __LINE__, ##__VA_ARGS__)
+#define DEBUG(format,...) printf("Line: %05d: "format"\n", __LINE__, ##__VA_ARGS__)
+#else
+#define DEBUG(format,...)
+#endif
 
 
 /* define size of stack for created thread */
