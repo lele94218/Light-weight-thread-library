@@ -13,7 +13,7 @@
 
 
 /* define size of stack for created thread */
-#define MAX_STACK_SIZE 2097152
+#define MAX_STACK_SIZE (10 * 1024 * 8)
 
 /* define NULL pointer */
 #define LWT_NULL NULL
@@ -64,10 +64,6 @@ typedef struct _lwt_t
     /* the status of a thread */
     lwt_info_t status;
     
-    /* previous and next thread in list */
-    struct _lwt_t * next;
-    struct _lwt_t * prev;
-    
     /* thread regarding join and wait */
     struct _lwt_t * merge_to;
     struct _lwt_t * wait_merge;
@@ -81,15 +77,7 @@ typedef struct _lwt_t
     /* Thread context */
     lwt_context context;
 }
-*lwt_t;
-
-/* LinkedList definiation */
-typedef struct _linked_list
-{
-    lwt_t head, tail;
-    int node_count;
-}
-linked_list;
+* lwt_t;
 
 
 /* Funciton declaration */
@@ -101,9 +89,5 @@ int lwt_yield(lwt_t  strong_thread);
 lwt_t lwt_current();
 int lwt_id(lwt_t  input_thread);
 int lwt_info(lwt_info_t t);
-
-/* test function declaration */
-void print_thread();
-
 
 #endif

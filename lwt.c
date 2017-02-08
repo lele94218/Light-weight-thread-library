@@ -3,46 +3,10 @@
 
 #include "lwt.h"
 
-static inline void
-list_insert(struct list * link, struct list * new_link)
-{
-    new_link->prev = link->prev;
-    new_link->next = link;
-    new_link->prev->next = new_link;
-    new_link->next->prev = new_link;
-}
+void __initiate (void) __attribute__((constructor));
 
-/* Insert new link after link */
-static inline void
-list_append(struct list *list, struct list *new_link)
-{
-    list_insert((struct list *)list, new_link);
-}
+/* --------------- Global variable --------------- */
 
-/* Insert new link before link */
-static inline void
-list_prepend(struct list *list, struct list *new_link)
-{
-    list_insert(list->next, new_link);
-}
-
-/* Remove link form list */
-static inline void
-list_remove(struct list *link)
-{
-    link->prev->next = link->next;
-    link->next->prev = link->prev;
-}
-
-static inline void
-list_init(struct list *list)
-{
-    list->next = list;
-    list->prev = list;
-}
-
-
-/* Global variable */
 /* used for assigning thread id */
 int lwt_counter = 0;
 int thread_initiated = 0;
@@ -58,46 +22,92 @@ lwt_t current_thread;
 lwt_t old_thread;
 
 
-/* internal function declaration, below functions are only used internally */
-/* functions for thread operation */
+/* --------------- internal function declarations --------------- */
+
+
 inline void __lwt_dispatch(lwt_context *curr, lwt_context *next);
 void __lwt_schedule (void);
 lwt_t  __create_thread(int with_stack, lwt_fn_t fn, void * data);
-void __init_thread(lwt_t created_thread);
-void __init_stack(lwt_t thread, lwt_fn_t fn, void * data);
 lwt_t  __reuse_thread(lwt_fn_t fn, void * data);
-void *__lwt_trampoline();
+void * __lwt_trampoline();
 void __initiate(void);
 
-/* thread queue functions declarartion */
-void __add_to_tail(lwt_t, struct list *);
-void __add_to_head(lwt_t, struct list *);
-void __remove_from_queue(lwt_t);
+
+
+/* --------------- inline function declarations --------------- */
+
+static inline void
+list_insert(struct list * link, struct list * new_link)
+{
+    new_link->prev = link->prev;
+    new_link->next = link;
+    new_link->prev->next = new_link;
+    new_link->next->prev = new_link;
+}
+
+/* Inint list */
+static inline void
+list_init(struct list *list)
+{
+    list->next = list;
+    list->prev = list;
+}
+
 
 /* add a thread to tail of a thread queue */
-void
+static inline void
 __add_to_tail (lwt_t thread, struct list * thread_queue)
 {
-    list_append(thread_queue, &thread->linked_list);
+    list_insert(thread_queue, (struct list *)(&thread->linked_list));
 }
 
 /* add a thread to head of a thread queue */
-void
+static inline void
 __add_to_head (lwt_t thread, struct list * thread_queue)
 {
-    list_prepend(thread_queue, &thread->linked_list);
+    list_insert(thread_queue->next, &thread->linked_list);
 }
 
 /* remove a thread from a queue */
-void
+static inline void
 __remove_from_queue(lwt_t thread)
 {
-    list_remove(&thread->linked_list);
+    (&thread->linked_list)->prev->next = (&thread->linked_list)->next;
+    (&thread->linked_list)->next->prev = (&thread->linked_list)->prev;
 }
+
+
+/* init a struct of lwt */
+static inline void
+__init_thread(lwt_t created_thread)
+{
+    created_thread->lwt_id = lwt_counter ++;
+    created_thread->status = LWT_INFO_NTHD_RUNNABLE;
+    created_thread->merge_to = NULL;
+    created_thread->wait_merge = NULL;
+    created_thread->last_word = NULL;
+}
+
+/* init a stack */
+static inline void
+__init_stack(lwt_t thread, lwt_fn_t fn, void * data)
+{
+    thread->context.sp = thread->init_sp;
+    thread->context.sp += (MAX_STACK_SIZE - sizeof(uint));
+    *((uint *)thread->context.sp) = (uint)data;
+    thread->context.sp -= (sizeof(uint));
+    *((uint *)thread->context.sp) = (uint)fn;
+    thread->context.sp -= (sizeof(uint));
+    thread->context.ip = (uint) __lwt_trampoline;
+}
+
+
+
+/* --------------- Function implementations --------------- */
 
 /* pause one thread, start executing the next one */
 inline void
-__lwt_dispatch(lwt_context *curr, lwt_context *next)
+__lwt_dispatch(lwt_context * curr, lwt_context * next)
 {
     __asm__ __volatile__
     (
@@ -122,6 +132,7 @@ __lwt_dispatch(lwt_context *curr, lwt_context *next)
      );
 }
 
+
 /* find one proper thread to execute from pool */
 void
 __lwt_schedule ()
@@ -136,7 +147,7 @@ __lwt_schedule ()
     }
     else
     {
-        current_thread=old_thread;
+        current_thread = old_thread;
         printd("thread %d cannot find a valid thread to dispatch, keep executing\n",current_thread->lwt_id);
         return;
     }
@@ -146,13 +157,13 @@ __lwt_schedule ()
 lwt_t
 __create_thread(int with_stack, lwt_fn_t fn, void * data)
 {
-    lwt_t  created_thread=(lwt_t) malloc (sizeof(struct _lwt_t));
+    lwt_t  created_thread = (lwt_t) malloc (sizeof(struct _lwt_t));
     __init_thread(created_thread);
     /* create a stack for the thread */
     if (with_stack)
     {
         /* init stack with die function */
-        created_thread->init_sp= (uint) malloc(MAX_STACK_SIZE);
+        created_thread->init_sp = (uint) malloc(MAX_STACK_SIZE);
         __init_stack(created_thread, fn, data);
     }
     printd("create thread %d complete\n", created_thread->lwt_id);
@@ -163,11 +174,11 @@ __create_thread(int with_stack, lwt_fn_t fn, void * data)
 lwt_t
 __reuse_thread(lwt_fn_t fn, void * data)
 {
-    lwt_t reused_thread=(lwt_t)(recycle_queue.next);
+    lwt_t reused_thread = (lwt_t)(recycle_queue.next);
     __remove_from_queue(reused_thread);
     __init_thread(reused_thread);
     printd("create thread %d from recycle\n", reused_thread->lwt_id);
-    uint _sp=reused_thread->init_sp;
+    uint _sp = reused_thread->init_sp;
     _sp += (MAX_STACK_SIZE - sizeof(uint));
     *((uint *)_sp) = (uint)data;
     _sp -= (sizeof(uint));
@@ -177,30 +188,6 @@ __reuse_thread(lwt_fn_t fn, void * data)
     reused_thread->context.ip = (uint) __lwt_trampoline;
     printd("create thread %d from recycle\n", reused_thread->lwt_id);
     return reused_thread;
-}
-
-/* init a struct of lwt */
-void __init_thread(lwt_t created_thread)
-{
-    created_thread->lwt_id = lwt_counter ++;
-    created_thread->status = LWT_INFO_NTHD_RUNNABLE;
-    created_thread->next = NULL;
-    created_thread->prev = NULL;
-    created_thread->merge_to = NULL;
-    created_thread->wait_merge = NULL;
-    created_thread->last_word = NULL;
-}
-
-/* init a stack */
-void __init_stack(lwt_t thread, lwt_fn_t fn, void * data)
-{
-    thread->context.sp = thread->init_sp;
-    thread->context.sp += (MAX_STACK_SIZE - sizeof(uint));
-    *((uint *)thread->context.sp) = (uint)data;
-    thread->context.sp -= (sizeof(uint));
-    *((uint *)thread->context.sp) = (uint)fn;
-    thread->context.sp -= (sizeof(uint));
-    thread->context.ip = (uint) __lwt_trampoline;
 }
 
 
@@ -223,9 +210,8 @@ __initiate()
     list_init(&zombie_queue);
     
     __add_to_tail(current_thread, &valid_queue);
-#ifdef printd_MODE
-    printf("initialization complete\n");
-#endif
+    printd("initialization complete\n");
+
 }
 
 
@@ -233,7 +219,6 @@ __initiate()
 lwt_t
 lwt_create(lwt_fn_t fn, void * data)
 {
-    if(!thread_initiated) __initiate();
     lwt_t  next_thread;
     /* decide if re-use from recycle queue */
     next_thread = (recycle_queue.next != recycle_queue.prev) ? __reuse_thread(fn, data) : __create_thread(1, fn, data);
@@ -299,25 +284,20 @@ lwt_yield(lwt_t strong_thread)
         __lwt_schedule();
         return 0;
     }
-#ifdef SAFE_MODE
+    
     /* yield to itself */
-    if (strong_thread == current_thread)
+    if (strong_thread == current_thread || strong_thread->status != LWT_INFO_NTHD_RUNNABLE)
     {
-        printd("thread %d is yielding to itself...\n",current_thread->lwt_id);
+        printd("thread %d is yielding to itself or it is not runable\n",current_thread->lwt_id);
         return 0;
     }
-    /* yield to something not runnable */
-    if (strong_thread->status != LWT_INFO_NTHD_RUNNABLE)
-    {
-        printd("thread %d is yielding to a thread not runnable...\n",current_thread->lwt_id);
-        return 0;
-    }
-#endif
+    
     __remove_from_queue(current_thread);
     __add_to_tail(current_thread, &valid_queue);
     __remove_from_queue(strong_thread);
     __add_to_head(strong_thread, &valid_queue);
     __lwt_schedule();
+    
     return 0;
 }
 
@@ -325,23 +305,13 @@ lwt_yield(lwt_t strong_thread)
 void *
 lwt_join(lwt_t thread_to_wait)
 {
-#ifdef SAFE_MODE
-    if(thread_to_wait == NULL)
+    
+    if(thread_to_wait == NULL || thread_to_wait == current_thread || thread_to_wait->merge_to != NULL)
     {
-        printd("error: current thread is waiting for a thread does not exists");
+        printd("error: thread to wait is NULL or itself or nobody waits it\n");
         return NULL;
     }
-    else if(thread_to_wait == current_thread)
-    {
-        printd("error: a thread cannot join itself");
-        return NULL;
-    }
-    else if(thread_to_wait->merge_to != NULL)
-    {
-        printd("error: cannot join a thread that is been reserved by others");
-        return NULL;
-    }
-#endif
+    
     if(thread_to_wait->status == LWT_INFO_NTHD_ZOMBIES)
     {
         printd("current thread is collecting a zombie thread\n");
@@ -362,7 +332,7 @@ lwt_join(lwt_t thread_to_wait)
     printd("thread %d picked up dead threads %d's last word %d\n", current_thread->lwt_id, current_thread->wait_merge->lwt_id, (int)current_thread->last_word);
     current_thread->wait_merge = NULL;
     return current_thread->last_word;
-    if(!thread_initiated) __initiate();
+    
     return current_thread;
 }
 
@@ -402,14 +372,3 @@ lwt_info(lwt_info_t t)
     
 }
 
-void
-print_thread()
-{
-    struct list * queue = &valid_queue;
-    struct list * cur = queue->next;
-    while (cur != queue)
-    {
-        printf("%d\n", ((lwt_t)cur)->lwt_id);
-        cur = cur->next;
-    }
-}
