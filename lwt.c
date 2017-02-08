@@ -100,15 +100,19 @@ __lwt_dispatch(lwt_context * curr, lwt_context * next)
 {
     __asm__ __volatile__
     (
-     
+	 "push %%ebx;"
+	 "push %%edi;"
+	 "push %%esi;"
      "movl %%esp,%0;"
      "movl $retDispatch%=,%1;"
      "movl %2,%%esp;"
      "jmp *%3;"
      "retDispatch%=:;"
+	 "pop %%esi;"
+	 "pop %%edi;"
+	 "pop %%ebx;"
      :"=m" (curr->sp),"=m" (curr->ip)
      :"m"(next->sp),"m" (next->ip)
-     : "ebx", "edi", "esi"
      );
 }
 
