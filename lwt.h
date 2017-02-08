@@ -63,9 +63,8 @@ typedef struct _lwt_t
     /* the status of a thread */
     lwt_info_t status;
     
-    /* thread regarding join and wait */
+    /* thread regarding join */
     struct _lwt_t * merge_to;
-    struct _lwt_t * wait_merge;
     
     /* initial stack memory pointer, lowest address */
     unsigned int init_sp;

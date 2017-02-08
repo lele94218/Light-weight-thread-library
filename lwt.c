@@ -69,8 +69,8 @@ __add_to_head (lwt_t thread, struct list * thread_queue)
 static inline void
 __remove_from_queue(lwt_t thread)
 {
-    (&thread->linked_list)->prev->next = (&thread->linked_list)->next;
-    (&thread->linked_list)->next->prev = (&thread->linked_list)->prev;
+    (thread->linked_list.prev)->next = thread->linked_list.next;
+    (thread->linked_list.next)->prev = thread->linked_list.prev;
 }
 
 
@@ -81,7 +81,6 @@ __init_thread(lwt_t created_thread)
     created_thread->lwt_id = lwt_counter ++;
     created_thread->status = LWT_INFO_NTHD_RUNNABLE;
     created_thread->merge_to = NULL;
-    created_thread->wait_merge = NULL;
     created_thread->last_word = NULL;
 }
 
@@ -93,24 +92,15 @@ __lwt_dispatch(lwt_context * curr, lwt_context * next)
 {
     __asm__ __volatile__
     (
-#ifdef SAFE_MODE
-     "push %%ebx;"
-     "push %%esi;"
-     "push %%edi;"
-#endif
+
      "movl %%esp,%0;"
      "movl $retDispatch%=,%1;"
      "movl %2,%%esp;"
      "jmp *%3;"
      "retDispatch%=:;"
-#ifdef SAFE_MODE
-     "pop %%edi;"
-     "pop %%esi;"
-     "pop %%ebx;"
-#endif
      :"=m" (curr->sp),"=m" (curr->ip)
      :"m"(next->sp),"m" (next->ip)
-     :
+     : "ebx", "edi", "esi"
      );
 }
 
@@ -252,10 +242,10 @@ __lwt_trampoline(lwt_fn_t fn, void * data)
 
 /* put the thread to run queue end, allow others to execute, if argument has a value, yield to a specific thread */
 int
-lwt_yield(lwt_t strong_thread)
+lwt_yield(lwt_t yield_to)
 {
     /* yield to NULL */
-    if (!strong_thread)
+    if (!yield_to)
     {
         printd("thread %d has yielded\n", current_thread->lwt_id);
         __remove_from_queue(current_thread);
@@ -265,7 +255,7 @@ lwt_yield(lwt_t strong_thread)
     }
     
     /* yield to itself */
-    if (strong_thread == current_thread || strong_thread->status != LWT_INFO_NTHD_RUNNABLE)
+    if (yield_to == current_thread || yield_to->status != LWT_INFO_NTHD_RUNNABLE)
     {
         printd("thread %d is yielding to itself or it is not runable\n",current_thread->lwt_id);
         return 0;
@@ -273,8 +263,8 @@ lwt_yield(lwt_t strong_thread)
     
     __remove_from_queue(current_thread);
     __add_to_tail(current_thread, &valid_queue);
-    __remove_from_queue(strong_thread);
-    __add_to_head(strong_thread, &valid_queue);
+    __remove_from_queue(yield_to);
+    __add_to_head(yield_to, &valid_queue);
     __lwt_schedule();
     
     return 0;
@@ -299,7 +289,6 @@ lwt_join(lwt_t thread_to_wait)
         return thread_to_wait->last_word;
     }
     /* update both thread */
-    current_thread->wait_merge = thread_to_wait;
     thread_to_wait->merge_to = current_thread;
     
     printd("thread %d blocked, waiting for thread %d to join\n", current_thread->lwt_id, thread_to_wait->lwt_id);
@@ -312,9 +301,8 @@ lwt_join(lwt_t thread_to_wait)
     
     __lwt_schedule();
     
-    printd("thread %d picked up dead threads %d's last word %d\n", current_thread->lwt_id, current_thread->wait_merge->lwt_id, (int)current_thread->last_word);
+    printd("thread %d picked up dead threads %d's last word %d\n", current_thread->lwt_id, thread_to_wait->lwt_id, (int)current_thread->last_word);
     
-    current_thread->wait_merge = NULL;
     return current_thread->last_word;
 }
 
