@@ -76,9 +76,6 @@ typedef struct _lwt_t
     /* Thread context */
     lwt_context context;
     
-    /* Function information */
-    lwt_fn_t fn;
-    void * data;
 }
 * lwt_t;
 

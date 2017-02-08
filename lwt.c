@@ -163,30 +163,38 @@ __initiate()
 lwt_t
 lwt_create(lwt_fn_t fn, void * data)
 {
-    lwt_t  next_thread;
+    lwt_t next_thread;
+    uint _sp;
     
     if (recycle_queue.next != &recycle_queue) {
         /* Noempty recycle queue */
         next_thread = (lwt_t)(recycle_queue.next);
         __remove_from_queue(next_thread);
+        _sp = next_thread->init_sp;
     }
     else
     {
         /* Create new thread */
         next_thread = (lwt_t) malloc (sizeof(struct _lwt_t));
-        next_thread->init_sp = (uint) malloc(MAX_STACK_SIZE);
-        next_thread->init_sp += MAX_STACK_SIZE;
+        _sp = (uint) malloc(MAX_STACK_SIZE);
+        _sp += MAX_STACK_SIZE;
+        next_thread->init_sp = _sp;
     }
-    
-    next_thread->context.sp = next_thread->init_sp;
-    next_thread->context.ip = (uint) __lwt_trampoline;
     
     /* Init other data */
     __init_thread(next_thread);
     
+    
     /* Init funciton info */
-    next_thread->fn = fn;
-    next_thread->data = data;
+    _sp -= (sizeof(uint));
+    *((uint *)_sp) = (uint)data;
+    _sp -= (sizeof(uint));
+    *((uint *)_sp) = (uint)fn;
+    _sp -= (sizeof(uint));
+    
+    
+    next_thread->context.sp = _sp;
+    next_thread->context.ip = (uint) __lwt_trampoline;
     
     
     printd("thread: %d has created thread: %d\n", current_thread->lwt_id, next_thread->lwt_id);
@@ -232,9 +240,9 @@ lwt_die(void * message)
 
 /* start a thread, execute its function, get return value and ready to kill the thread */
 void *
-__lwt_trampoline()
+__lwt_trampoline(lwt_fn_t fn, void * data)
 {
-    void * return_message = (current_thread->fn)(current_thread->data);
+    void * return_message = fn(data);
     
     printd("thread %d ready to die, with last word %d\n", current_thread->lwt_id, (int)return_message);
     
