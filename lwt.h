@@ -5,14 +5,10 @@
 /* turn this on will enable error check for user input */
 #define SAFE_MODE
 
-/* turn this on will display thread running information */
-//#define __DEBUG__
-
-
-#ifdef __DEBUG__
-#define DEBUG(format, ...) printf("Line: %05d: "format"\n", __LINE__, ##__VA_ARGS__)
+#ifdef DEBUG
+#define printd(format, ...) printf("Line: %05d: "format"\n", __LINE__, ##__VA_ARGS__)
 #else
-#define DEBUG(format, ...)
+#define printd(format, ...)
 #endif
 
 
