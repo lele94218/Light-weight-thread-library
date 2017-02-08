@@ -3,10 +3,9 @@
 
 
 /* turn this on will enable error check for user input */
-#define SAFE_MODE
 
 #ifdef DEBUG
-#define printd(format, ...) printf("Line: %05d: "format"\n", __LINE__, ##__VA_ARGS__)
+#define printd(format, ...) printf("Line: %05d: "format, __LINE__, ##__VA_ARGS__)
 #else
 #define printd(format, ...)
 #endif
@@ -76,6 +75,10 @@ typedef struct _lwt_t
     
     /* Thread context */
     lwt_context context;
+    
+    /* Function information */
+    lwt_fn_t fn;
+    void * data;
 }
 * lwt_t;
 
