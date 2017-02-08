@@ -191,7 +191,6 @@ __reuse_thread(lwt_fn_t fn, void * data)
 	lwt_t reused_thread=recycle_queue->head;
 	__remove_from_queue(reused_thread, recycle_queue);
 	__init_thread(reused_thread);
-<<<<<<< HEAD
 	DEBUG("create thread %d from recycle\n", reused_thread->lwt_id);
 	uint _sp=reused_thread->init_sp;
 	_sp += (MAX_STACK_SIZE - sizeof(uint));
@@ -201,12 +200,7 @@ __reuse_thread(lwt_fn_t fn, void * data)
 	_sp -= (sizeof(uint));
 	reused_thread->context.sp = _sp;
 	reused_thread->context.ip = (uint) __lwt_trampoline;
-=======
-#ifdef DEBUG_MODE
-	printf("create thread %d from recycle\n", reused_thread->lwt_id);
-#endif
-	__init_stack(reused_thread, fn, data);
->>>>>>> 1a32f744a955dfca6bdfcb78a1b149f94de744fb
+	DEBUG("create thread %d from recycle\n", reused_thread->lwt_id);
 	return reused_thread;
 }
 
