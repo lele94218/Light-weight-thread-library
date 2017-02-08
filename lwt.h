@@ -27,55 +27,64 @@ typedef void * (*lwt_fn_t)(void *);
 /* Thread state.  */
 typedef enum _lwt_info_t
 {
-	/* The thread is running. */
-	LWT_INFO_NTHD_RUNNABLE,
-	/* The thread is blocked. */
-	LWT_INFO_NTHD_BLOCKED,
-	/* This is a zombie thread. */
-	LWT_INFO_NTHD_ZOMBIES
+    /* The thread is running. */
+    LWT_INFO_NTHD_RUNNABLE,
+    /* The thread is blocked. */
+    LWT_INFO_NTHD_BLOCKED,
+    /* This is a zombie thread. */
+    LWT_INFO_NTHD_ZOMBIES
 }
 lwt_info_t;
 
 /* define the context of a thread */
 typedef struct _lwt_context
 {
-	unsigned int ip, sp;
+    unsigned int ip, sp;
 }
 lwt_context;
+
+
+struct list {
+    struct list * next, * prev;
+};
+
 
 /* This structure describes a LWT thread. */
 typedef struct _lwt_t
 {
-	/* Thread id */
-	t_id lwt_id;
-
-	/* the status of a thread */
-	lwt_info_t status;
-
-	/* previous and next thread in list */
-	struct _lwt_t * next;
-	struct _lwt_t * prev;
-
-	/* thread regarding join and wait */
-	struct _lwt_t * merge_to;
-	struct _lwt_t * wait_merge;
-
-	/* initial stack memory pointer, lowest address */
-	unsigned int init_sp;
-
-	/* return value */
-	void * last_word;
-
-	/* Thread context */
-	lwt_context context;
+    /* Linked list */
+    struct list linked_list;
+    
+    /* Thread id */
+    t_id lwt_id;
+    
+    /* the status of a thread */
+    lwt_info_t status;
+    
+    /* previous and next thread in list */
+    struct _lwt_t * next;
+    struct _lwt_t * prev;
+    
+    /* thread regarding join and wait */
+    struct _lwt_t * merge_to;
+    struct _lwt_t * wait_merge;
+    
+    /* initial stack memory pointer, lowest address */
+    unsigned int init_sp;
+    
+    /* return value */
+    void * last_word;
+    
+    /* Thread context */
+    lwt_context context;
 }
 *lwt_t;
 
 /* LinkedList definiation */
 typedef struct _linked_list
 {
-	lwt_t head, tail;
-	int node_count;
+    lwt_t head, tail;
+    int node_count;
 }
 linked_list;
 
@@ -91,8 +100,7 @@ int lwt_id(lwt_t  input_thread);
 int lwt_info(lwt_info_t t);
 
 /* test function declaration */
-void print_living_thread_info();
-void print_recycle_thread_info();
-void print_zombie_thread_info();
+void print_thread();
+
 
 #endif
