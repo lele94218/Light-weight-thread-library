@@ -14,15 +14,11 @@ void __initiate (void) __attribute__((constructor));
 int lwt_counter = 0;
 
 /* three queues, one for thread either waiting or running, one for zombies, one for recycle */
-struct list _valid_queue;
-struct list _block_queue;
-struct list _recycle_queue;
-struct list _zombie_queue;
+struct list valid_queue;
+struct list block_queue;
+struct list recycle_queue;
+struct list zombie_queue;
 
-struct list * valid_queue;
-struct list * block_queue;
-struct list * recycle_queue;
-struct list * zombie_queue;
 
 /* identify threads */
 lwt_t current_thread;
@@ -122,7 +118,7 @@ inline void
 __lwt_schedule ()
 {
     old_thread = current_thread;
-    current_thread = (lwt_t)(valid_queue->next);
+    current_thread = (lwt_t)(valid_queue.next);
     printd("thread %d start executing from reschedule\n", current_thread->lwt_id);
     __lwt_dispatch(thread_context(old_thread), thread_context(current_thread));
 }
@@ -132,27 +128,22 @@ __lwt_schedule ()
 void
 __initiate()
 {
-    valid_queue = &_valid_queue;
-    block_queue = &_block_queue;
-    recycle_queue = &_recycle_queue;
-    zombie_queue = &_zombie_queue;
-    
     current_thread = (lwt_t) malloc (sizeof(struct _lwt_t));
     __init_thread(current_thread);
     
     /* initialize valid_queue */
-    list_init(valid_queue);
+    list_init(&valid_queue);
     
     /* initialize block_queue */
-    list_init(block_queue);
+    list_init(&block_queue);
     
     /* initialize recycle queue */
-    list_init(recycle_queue);
+    list_init(&recycle_queue);
     
     /* initialize zombie_queue */
-    list_init(zombie_queue);
+    list_init(&zombie_queue);
     
-    __add_to_tail(current_thread, valid_queue);
+    __add_to_tail(current_thread, &valid_queue);
     printd("initialization complete\n");
     
 }
@@ -165,9 +156,9 @@ lwt_create(lwt_fn_t fn, void * data)
     lwt_t next_thread;
     uint _sp;
     
-    if (recycle_queue->next != recycle_queue) {
+    if (recycle_queue.next != &recycle_queue) {
         /* Noempty recycle queue */
-        next_thread = (lwt_t)(recycle_queue->next);
+        next_thread = (lwt_t)(recycle_queue.next);
         __remove_from_queue(next_thread);
         _sp = next_thread->init_sp;
     }
@@ -198,7 +189,7 @@ lwt_create(lwt_fn_t fn, void * data)
     
     printd("thread: %d has created thread: %d\n", current_thread->lwt_id, next_thread->lwt_id);
     
-    __add_to_tail(next_thread, valid_queue);
+    __add_to_tail(next_thread, &valid_queue);
     return next_thread;
 }
 
@@ -217,11 +208,11 @@ lwt_die(void * message)
         current_thread->merge_to->last_word = message;
         
         __remove_from_queue(current_thread->merge_to);
-        __add_to_tail(current_thread->merge_to, valid_queue);
+        __add_to_tail(current_thread->merge_to, &valid_queue);
         
         current_thread->status = LWT_INFO_NTHD_ZOMBIES;
         __remove_from_queue(current_thread);
-        __add_to_tail(current_thread, recycle_queue);
+        __add_to_tail(current_thread, &recycle_queue);
         
         printd("removed dead thread %d to recycle queue\n", current_thread->lwt_id);
     }
@@ -230,7 +221,7 @@ lwt_die(void * message)
     {
         current_thread->status = LWT_INFO_NTHD_ZOMBIES;
         __remove_from_queue(current_thread);
-        __add_to_tail(current_thread, zombie_queue);
+        __add_to_tail(current_thread, &zombie_queue);
         printd("removed dead thread %d to zombie queue\n", current_thread->lwt_id);
     }
     
@@ -266,11 +257,11 @@ lwt_yield(lwt_t yield_to)
     if (yield_to)
     {
         __remove_from_queue(yield_to);
-        __add_to_head(yield_to, valid_queue);
+        __add_to_head(yield_to, &valid_queue);
     }
     
     __remove_from_queue(current_thread);
-    __add_to_tail(current_thread, valid_queue);
+    __add_to_tail(current_thread, &valid_queue);
     __lwt_schedule();
     
     return 0;
@@ -291,7 +282,7 @@ lwt_join(lwt_t thread_to_wait)
     {
         printd("current thread is collecting a zombie thread\n");
         __remove_from_queue(thread_to_wait);
-        __add_to_tail(thread_to_wait, recycle_queue);
+        __add_to_tail(thread_to_wait, &recycle_queue);
         return thread_to_wait->last_word;
     }
     /* update both thread */
@@ -303,7 +294,7 @@ lwt_join(lwt_t thread_to_wait)
     
     /* Move to blocked queue */
     __remove_from_queue(current_thread);
-    __add_to_tail(current_thread, block_queue);
+    __add_to_tail(current_thread, &block_queue);
     
     __lwt_schedule();
     
@@ -328,18 +319,18 @@ lwt_info(lwt_info_t t)
     
     switch (t) {
         case LWT_INFO_NTHD_ZOMBIES:
-            current = zombie_queue->next;
-            head = zombie_queue;
+            current = zombie_queue.next;
+            head = &zombie_queue;
             break;
             
         case LWT_INFO_NTHD_BLOCKED:
-            current = block_queue->next;
-            head = block_queue;
+            current = block_queue.next;
+            head = &block_queue;
             break;
             
         default:
-            current = valid_queue->next;
-            head = valid_queue;
+            current = valid_queue.next;
+            head = &valid_queue;
             break;
     }
     
