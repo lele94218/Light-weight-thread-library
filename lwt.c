@@ -4,7 +4,7 @@
 #include "lwt.h"
 
 #define thread_context(thread) \
-        ((lwt_context *)((char *)(thread)+(uint)(&((lwt_t)0)->context)))
+        ((struct _lwt_context *)((char *)(thread)+(uint)(&((lwt_t)0)->context)))
 
 void __initiate (void) __attribute__((constructor));
 
@@ -28,7 +28,7 @@ lwt_t old_thread;
 /* --------------- internal function declarations --------------- */
 
 
-inline void __lwt_dispatch(lwt_context *curr, lwt_context *next);
+inline void __lwt_dispatch(struct _lwt_context *curr, struct _lwt_context *next);
 void __lwt_schedule (void);
 void * __lwt_trampoline();
 void __initiate(void);
@@ -92,7 +92,7 @@ __init_thread(lwt_t created_thread)
 
 /* pause one thread, start executing the next one */
 inline void
-__lwt_dispatch(lwt_context * curr, lwt_context * next)
+__lwt_dispatch(struct _lwt_context * curr, struct _lwt_context * next)
 {
     __asm__ __volatile__
     (

@@ -43,11 +43,12 @@ typedef enum _lwt_info_t
 lwt_info_t;
 
 /* define the context of a thread */
-typedef struct _lwt_context
+struct _lwt_context
 {
     unsigned int ip, sp;
-}
-lwt_context;
+};
+
+//typedef struct _lwt_context lwt_context;
 
 
 struct list {
@@ -56,7 +57,7 @@ struct list {
 
 
 /* This structure describes a LWT thread. */
-typedef struct _lwt_t
+struct _lwt_t
 {
     /* Linked list */
     struct list linked_list;
@@ -77,15 +78,16 @@ typedef struct _lwt_t
     void * last_word;
     
     /* Thread context */
-    lwt_context context;
+    struct _lwt_context context;
     
-}
-* lwt_t;
+};
+
+typedef struct _lwt_t * lwt_t;
 
 
 /* Funciton declaration */
 lwt_t  lwt_create(lwt_fn_t fn, void * data);
-void __lwt_dispatch(lwt_context *curr, lwt_context *next);
+void __lwt_dispatch(struct _lwt_context *curr, struct _lwt_context *next);
 void * lwt_join(lwt_t  thread_to_wait);
 void lwt_die(void *);
 int lwt_yield(lwt_t  strong_thread);
