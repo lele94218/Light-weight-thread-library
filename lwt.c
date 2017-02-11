@@ -372,7 +372,12 @@ lwt_chan_t lwt_chan(int size)
 }
 
 void lwt_chan_deref (lwt_chan_t c)
-{}
+{
+    c->reference_counter--;
+    if (c->reference_counter == 0) {
+        free(c);
+    }
+}
 
 int lwt_snd(lwt_chan_t c, void * data)
 {return 0;}
