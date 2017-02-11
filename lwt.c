@@ -368,6 +368,15 @@ __add_to_head_chan (lwt_t thread, struct list * sender_queue)
     list_insert(sender_queue->next, &thread->sender_queue);
 }
 
+/* remove a thread from a queue */
+static inline void
+__remove_from_queue_chan(lwt_t thread)
+{
+    (thread->sender_queue.prev)->next = thread->sender_queue.next;
+    (thread->sender_queue.next)->prev = thread->sender_queue.prev;
+}
+
+/* create a thread with initial channel */
 lwt_t lwt_create_chan(lwt_chan_fn_t fn, lwt_chan_t input_channel)
 {
     lwt_t created_thread = lwt_create((void *)fn, (void *)input_channel);
@@ -400,7 +409,11 @@ int lwt_snd(lwt_chan_t channel, void * data)
 {
     if (channel->sender_queue.next!=&(channel->sender_queue))
     {
-    __add_to_tail(current_thread, &valid_queue);
+    __add_to_tail_chan(current_thread, &(channel->sender_queue));
+    current_thread->status = LWT_STATUS_BLOCKED;
+    __remove_from_queue(current_thread);
+    __add_to_tail(current_thread, &block_queue);
+    __lwt_schedule();
     }
     return 0;
 }
