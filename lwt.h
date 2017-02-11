@@ -29,6 +29,7 @@ typedef int t_stat;
 
 /* define a function pointer */
 typedef void * (*lwt_fn_t)(void *);
+typedef void * (*lwt_chan_fn_t)(lwt_chan_t);
 
 /* Thread state.  */
 typedef enum _lwt_info_t
