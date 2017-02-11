@@ -431,20 +431,25 @@ int lwt_snd(lwt_chan_t chan, void * data)
     return 0;
 }
 
-void *lwt_rcv(lwt_chan_t c)
+void *lwt_rcv(lwt_chan_t chan)
 {
+    if (chan->sender_count==0) return NULL;
     void * result;
-    if (c->sender_queue.next!=&(c->sender_queue)) {
-        lwt_t sender = ((lwt_t)((int)(c->sender_queue.next)-offset_sender));
+    if (chan->sender_queue.next!=&(chan->sender_queue))
+    {
+        lwt_t sender = ((lwt_t)((int)(chan->sender_queue.next)-offset_sender));
         sender->status = LWT_STATUS_RUNNABLE;
         result = sender->message_data;
-        sender->message_data = NULL;
+        __remove_from_queue(sender);
+        __add_to_head(sender, &valid_queue);
         __remove_from_queue_chan(sender);
         return result;
     }
     else
     {
         current_thread->status = LWT_STATUS_BLOCKED;
+        current_thread->block_for = BLOCKED_RECEIVING;
+        __remove_from_queue(current_thread);
         __add_to_tail(current_thread, &block_queue);
         __lwt_schedule();
     }
