@@ -85,6 +85,9 @@ struct _lwt_t
 
     /* thread regarding join */
     struct _lwt_t * merge_to;
+
+    /* data sending to other thread */
+	void * message_data;
     
     /* initial stack memory pointer, lowest address */
     unsigned int init_sp;
@@ -117,7 +120,6 @@ typedef struct lwt_channel * lwt_chan_t;
 /* define a function pointer */
 typedef void * (*lwt_fn_t)(void *);
 typedef void * (*lwt_chan_fn_t)(lwt_chan_t);
-
 
 /* Funciton declaration for lwt thread operation */
 lwt_t  lwt_create(lwt_fn_t fn, void * data);

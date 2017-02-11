@@ -308,7 +308,6 @@ lwt_join(lwt_t thread_to_wait)
 lwt_t
 lwt_current()
 {
-    printf("offset is %d, and %d\n", offset_thread, offset_sender);
     return current_thread;
 }
 
@@ -380,7 +379,9 @@ void lwt_chan_deref (lwt_chan_t c)
 }
 
 int lwt_snd(lwt_chan_t c, void * data)
-{return 0;}
+{
+
+return 0;}
 
 void *lwt_rcv(lwt_chan_t c)
 {return  NULL;}
