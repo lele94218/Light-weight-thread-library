@@ -100,7 +100,7 @@ struct lwt_channel
     int sender_count;
 
     /* receiver thread */
-    struct _lwt_t * receiver
+    struct _lwt_t * receiver;
 };
 typedef struct lwt_channel * lwt_chan_t;
 
