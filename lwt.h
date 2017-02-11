@@ -102,7 +102,7 @@ struct lwt_channel
     /* receiver thread */
     struct _lwt_t * receiver
 };
-typedef struct lwt_channel * lwt_chan_t
+typedef struct lwt_channel * lwt_chan_t;
 
 
 /* Funciton declaration for lwt thread operation */
