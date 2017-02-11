@@ -16,9 +16,6 @@
 
 /* define NULL pointer */
 #define LWT_NULL NULL
-#define LWT_STAT_RUNNABLE = 0;
-#define LWT_STAT_BLOCKED = 1;
-#define LWT_STAT_ZOMBIES = 2;
 
 /* Data type redefinition */
 typedef unsigned int uint;
@@ -30,7 +27,7 @@ typedef int t_stat;
 /* define a function pointer */
 typedef void * (*lwt_fn_t)(void *);
 
-/* Thread state.  */
+/* User info argument type.  */
 typedef enum _lwt_info_t
 {
     /* The thread is running. */
@@ -41,6 +38,17 @@ typedef enum _lwt_info_t
     LWT_INFO_NTHD_ZOMBIES
 }
 lwt_info_t;
+
+typedef enum _lwt_status
+{
+    /* The thread is running. */
+    LWT_STATUS_RUNNABLE = 0,
+    /* The thread is blocked. */
+    LWT_STATUS_BLOCKED,
+    /* This is a zombie thread. */
+    LWT_STATUS_ZOMBIES
+}
+lwt_status;
 
 /* define the context of a thread */
 struct _lwt_context
@@ -93,9 +101,9 @@ struct lwt_channel
     int sender_count;
 
     /* receiver thread */
-    struct _lwt_t * receiver
+    struct _lwt_t * receiver;
 };
-typedef struct lwt_channel * lwt_chan_t
+typedef struct lwt_channel * lwt_chan_t;
 
 
 /* Funciton declaration for lwt thread operation */

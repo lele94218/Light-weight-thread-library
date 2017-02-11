@@ -83,7 +83,7 @@ static inline void
 __init_thread(lwt_t created_thread)
 {
     created_thread->lwt_id = lwt_counter ++;
-    created_thread->status = LWT_INFO_NTHD_RUNNABLE;
+    created_thread->status = LWT_STATUS_RUNNABLE;
     created_thread->merge_to = NULL;
     created_thread->last_word = NULL;
 }
@@ -204,13 +204,13 @@ lwt_die(void * message)
     /* if someone is waiting to join this one, return and go to recycle queue */
     if (current_thread->merge_to)
     {
-        current_thread->merge_to->status = LWT_INFO_NTHD_RUNNABLE;
+        current_thread->merge_to->status = LWT_STATUS_RUNNABLE;
         current_thread->merge_to->last_word = message;
         
         __remove_from_queue(current_thread->merge_to);
         __add_to_tail(current_thread->merge_to, &valid_queue);
         
-        current_thread->status = LWT_INFO_NTHD_ZOMBIES;
+        current_thread->status = LWT_STATUS_ZOMBIES;
         __remove_from_queue(current_thread);
         __add_to_tail(current_thread, &recycle_queue);
         
@@ -219,7 +219,7 @@ lwt_die(void * message)
     /* nobody is currently waiting to join this one, becomes a zombie */
     else
     {
-        current_thread->status = LWT_INFO_NTHD_ZOMBIES;
+        current_thread->status = LWT_STATUS_ZOMBIES;
         __remove_from_queue(current_thread);
         __add_to_tail(current_thread, &zombie_queue);
         printd("removed dead thread %d to zombie queue\n", current_thread->lwt_id);
@@ -247,7 +247,7 @@ lwt_yield(lwt_t yield_to)
 {
     
     /* yield to itself */
-    if (yield_to == current_thread || (yield_to && yield_to->status != LWT_INFO_NTHD_RUNNABLE))
+    if (yield_to == current_thread || (yield_to && yield_to->status != LWT_STATUS_RUNNABLE))
     {
         printd("thread %d is yielding to itself or it is not runable\n",current_thread->lwt_id);
         return 0;
@@ -278,7 +278,7 @@ lwt_join(lwt_t thread_to_wait)
         return NULL;
     }
     
-    if(thread_to_wait->status == LWT_INFO_NTHD_ZOMBIES)
+    if(thread_to_wait->status == LWT_STATUS_ZOMBIES)
     {
         printd("current thread is collecting a zombie thread\n");
         __remove_from_queue(thread_to_wait);
@@ -290,7 +290,7 @@ lwt_join(lwt_t thread_to_wait)
     
     printd("thread %d blocked, waiting for thread %d to join\n", current_thread->lwt_id, thread_to_wait->lwt_id);
     
-    current_thread->status = LWT_INFO_NTHD_BLOCKED;
+    current_thread->status = LWT_STATUS_BLOCKED;
     
     /* Move to blocked queue */
     __remove_from_queue(current_thread);
@@ -343,4 +343,6 @@ lwt_info(lwt_info_t t)
     return cnt;
     
 }
+
+
 
