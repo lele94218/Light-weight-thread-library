@@ -387,43 +387,43 @@ lwt_t lwt_create_chan(lwt_chan_fn_t fn, lwt_chan_t chan)
 /* create a channel in the current thread */
 lwt_chan_t lwt_chan(int size)
 {
-    lwt_chan_t chan=(lwt_chan_t)malloc(sizeof(struct lwt_channel));
-    chan->receiver=current_thread;
-    chan->sender_count=0;
-    chan->chan_id=chan_counter++;
+    lwt_chan_t chan = (lwt_chan_t)malloc(sizeof(struct lwt_channel));
+    chan->receiver = current_thread;
+    chan->sender_count = 0;
+    chan->chan_id = chan_counter++;
     printf("thread %d has created channel %d.\n", current_thread->lwt_id, chan->chan_id);
     return chan;
 }
 
 void lwt_chan_deref (lwt_chan_t chan)
 {
-    if (chan->receiver==current_thread)
+    if (chan->receiver == current_thread)
     {
-        chan->receiver==NULL;
+        chan->receiver = NULL;
         printf("thread %d is nolonger receiver of channel %d.\n", current_thread->lwt_id, chan->chan_id);
     }
     else chan->sender_count--;
     printf("thread %d has de-ref channel %d, sender left: %d.\n", current_thread->lwt_id, chan->chan_id, chan->sender_count);
-    if (chan->sender_count == 0&&chan->receiver==NULL) {
+    if (chan->sender_count == 0 && chan->receiver == NULL) {
         free(chan);
     }
 }
 
 int lwt_snd(lwt_chan_t chan, void * data)
 {
-    if (chan->receiver==NULL)
+    if (chan->receiver == NULL)
     {
         return -1;
     }
-    current_thread->message_data=data;
+    current_thread->message_data = data;
     __add_to_tail_chan(current_thread, &(chan->sender_queue));
     __remove_from_queue(current_thread);
     __add_to_tail(current_thread, &block_queue);
     current_thread->status = LWT_STATUS_BLOCKED;
-    current_thread->block_for=BLOCKED_SENDING;
-    if (chan->receiver->status==LWT_STATUS_BLOCKED&&chan->receiver->block_for==BLOCKED_RECEIVING)
+    current_thread->block_for = BLOCKED_SENDING;
+    if (chan->receiver->status == LWT_STATUS_BLOCKED && chan->receiver->block_for == BLOCKED_RECEIVING)
     {
-        chan->receiver->status==LWT_STATUS_RUNNABLE;
+        chan->receiver->status = LWT_STATUS_RUNNABLE;
         __remove_from_queue_chan(chan->receiver);
         __add_to_head_chan(chan->receiver, &valid_queue);
     }
@@ -433,7 +433,7 @@ int lwt_snd(lwt_chan_t chan, void * data)
 
 void *lwt_rcv(lwt_chan_t chan)
 {
-    if (chan->sender_count==0) return NULL;
+    if (chan->sender_count == 0) return NULL;
     void * result;
     if (chan->sender_queue.next!=&(chan->sender_queue))
     {
@@ -457,10 +457,14 @@ void *lwt_rcv(lwt_chan_t chan)
 }
 
 int lwt_snd_chan(lwt_chan_t c, lwt_chan_t sending)
-{return 0;}
+{
+    return 0;
+}
 
 lwt_chan_t lwt_rcv_chan(lwt_chan_t c)
-{return NULL;}
+{
+    return NULL;
+}
 
 
 
