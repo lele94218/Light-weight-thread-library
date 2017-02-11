@@ -103,6 +103,9 @@ typedef struct _lwt_t * lwt_t;
 /* This structure describes a lwt channel */
 struct lwt_channel
 {
+    /* channel ID */
+    int chan_id;
+
     /* Linked list */
     struct list sender_queue;
 

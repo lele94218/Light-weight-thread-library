@@ -12,6 +12,7 @@ void __initiate (void) __attribute__((constructor));
 
 /* used for assigning thread id */
 int lwt_counter = 0;
+int chan_counter = 0;
 const int offset_thread = (int)(&(((lwt_t)0)->linked_list));
 const int offset_sender = (int)(&(((lwt_t)0)->sender_queue));
 
@@ -353,6 +354,20 @@ lwt_info(enum lwt_info_t t)
 
 /* Below functions are related to thread communication */
 
+/* add a thread to tail of a thread queue */
+static inline void
+__add_to_tail_chan (lwt_t thread, struct list * sender_queue)
+{
+    list_insert(sender_queue, &thread->sender_queue);
+}
+
+/* add a thread to head of a thread queue */
+static inline void
+__add_to_head_chan (lwt_t thread, struct list * sender_queue)
+{
+    list_insert(sender_queue->next, &thread->sender_queue);
+}
+
 lwt_t lwt_create_chan(lwt_chan_fn_t fn, lwt_chan_t input_channel)
 {
     lwt_t created_thread = lwt_create((void *)fn, (void *)input_channel);
@@ -367,12 +382,15 @@ lwt_chan_t lwt_chan(int size)
     chan->receiver=current_thread;
     chan->sender_count=0;
     chan->reference_counter=1;
+    chan->chan_id=chan_counter++;
+    printf("thread %d has created channel %d.\n", current_thread->lwt_id, chan->chan_id);
     return chan;
 }
 
 void lwt_chan_deref (lwt_chan_t c)
 {
     c->reference_counter--;
+    printf("thread %d has de-ref channel %d, refs left: %d.\n", current_thread->lwt_id, c->chan_id, c->reference_counter);
     if (c->reference_counter == 0) {
         free(c);
     }
@@ -380,11 +398,12 @@ void lwt_chan_deref (lwt_chan_t c)
 
 int lwt_snd(lwt_chan_t channel, void * data)
 {
-    if (channel->sender_queue.next!=channel->sender_queue)
+    if (channel->sender_queue.next!=&(channel->sender_queue))
     {
-
+    __add_to_tail(current_thread, &valid_queue);
     }
-return 0;}
+    return 0;
+}
 
 void *lwt_rcv(lwt_chan_t c)
 {
