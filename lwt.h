@@ -81,13 +81,11 @@ struct _lwt_t
     struct _lwt_context context;
     
 };
-
 typedef struct _lwt_t * lwt_t;
 
 
 /* Funciton declaration */
 lwt_t  lwt_create(lwt_fn_t fn, void * data);
-void __lwt_dispatch(struct _lwt_context *curr, struct _lwt_context *next);
 void * lwt_join(lwt_t  thread_to_wait);
 void lwt_die(void *);
 int lwt_yield(lwt_t  strong_thread);

@@ -30,7 +30,7 @@ lwt_t old_thread;
 
 inline void __lwt_dispatch(struct _lwt_context *curr, struct _lwt_context *next);
 void __lwt_schedule (void);
-void * __lwt_trampoline();
+void * __lwt_trampoline(lwt_fn_t fn, void * data);
 void __initiate(void);
 
 
@@ -59,7 +59,7 @@ list_init(struct list *list)
 static inline void
 __add_to_tail (lwt_t thread, struct list * thread_queue)
 {
-    list_insert(thread_queue, (struct list *)(&thread->linked_list));
+    list_insert(thread_queue, &thread->linked_list);
 }
 
 /* add a thread to head of a thread queue */
