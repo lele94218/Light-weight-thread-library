@@ -310,6 +310,7 @@ lwt_id(lwt_t input_thread)
     return current_thread->lwt_id;
 }
 
+/* return the informatin of current thread status */
 int
 lwt_info(lwt_info_t t)
 {
