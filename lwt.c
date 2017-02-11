@@ -349,6 +349,8 @@ lwt_chan_t lwt_chan(int size)
 {
     lwt_chan_t chan=(lwt_chan_t)malloc(sizeof(struct lwt_channel));
     chan->receiver=current_thread;
+    chan->sender_count=0;
+    chan->sender_queue=NULL;
     return chan;
 }
 
