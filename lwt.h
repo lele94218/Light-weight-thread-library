@@ -105,6 +105,9 @@ struct lwt_channel
 
     /* number of senders of this channel */
     int sender_count;
+    
+    /* number of threads that have reference to the channel */
+    int reference_counter;
 
     /* receiver thread */
     struct _lwt_t * receiver;

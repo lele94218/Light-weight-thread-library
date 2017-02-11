@@ -353,23 +353,25 @@ lwt_info(enum lwt_info_t t)
 }
 
 /* Below functions are related to thread communication */
-/*
+
 lwt_t lwt_create_chan(lwt_chan_fn_t fn, lwt_chan_t input_channel)
 {
     lwt_t created_thread = lwt_create(fn, input_channel);
     input_channel -> receiver = created_thread;
-    input_channel ->sender???????????
-}*/
+    input_channel -> reference_counter += 1;
+    return created_thread;
+}
 /* create a channel in the current thread */
-/*lwt_chan_t lwt_chan(int size)
+lwt_chan_t lwt_chan(int size)
 {
     lwt_chan_t chan=(lwt_chan_t)malloc(sizeof(struct lwt_channel));
     chan->receiver=current_thread;
     chan->sender_count=0;
+    chan->reference_counter=1;
     return chan;
 }
 
-*/
+
 
 
 
