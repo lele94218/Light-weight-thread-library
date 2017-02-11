@@ -118,9 +118,8 @@ int lwt_info(lwt_info_t t);
 lwt_chan_t lwt_chan (int sz);
 void lwt_chan_deref (lwt_chan_t c);
 int lwt_snd(lwt_chan_t c, void * data);
-
-
-
-
-
+void *lwt_rcv(lwt_chan_t c);
+int lwt_snd_chan(lwt_chan_t c, lwt_chan_t sending);
+lwt_chan_t lwt_rcv_chan(lwt_chan_t c);
+lwt_t lwt_create_chan(lwt_chan_fn_t fn, lwt_chan_t c);
 #endif
