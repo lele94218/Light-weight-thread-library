@@ -356,7 +356,7 @@ lwt_info(enum lwt_info_t t)
 
 lwt_t lwt_create_chan(lwt_chan_fn_t fn, lwt_chan_t input_channel)
 {
-    lwt_t created_thread = lwt_create(fn, input_channel);
+    lwt_t created_thread = lwt_create((void *)fn, (void *)input_channel);
     input_channel -> receiver = created_thread;
     input_channel -> reference_counter += 1;
     return created_thread;
