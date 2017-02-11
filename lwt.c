@@ -423,8 +423,12 @@ int lwt_snd(lwt_chan_t chan, void * data)
 
 void *lwt_rcv(lwt_chan_t c)
 {
+    void * result;
     if (c->sender_queue.next) {
-        (lwt_t)((int)(c->sender_queue.next)-offset_sender)->status == LWT_STATUS_RUNNABLE;
+        ((lwt_t)((int)(c->sender_queue.next)-offset_sender))->status = LWT_STATUS_RUNNABLE;
+        result = ((lwt_t)((int)(c->sender_queue.next)-offset_sender))->message_data;
+        ((lwt_t)((int)(c->sender_queue.next)-offset_sender))->message_data = NULL;
+        return result;
     }
     else
     {
