@@ -85,6 +85,9 @@ struct _lwt_t
 
     /* thread regarding join */
     struct _lwt_t * merge_to;
+
+    /* data sending to other thread */
+	void * message_data;
     
     /* initial stack memory pointer, lowest address */
     unsigned int init_sp;
