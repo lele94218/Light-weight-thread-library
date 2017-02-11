@@ -39,11 +39,11 @@ typedef enum _lwt_info_t
     /* The thread is blocked. */
     LWT_INFO_NTHD_BLOCKED,
     /* This is a zombie thread. */
-    LWT_INFO_NTHD_ZOMBIES
+    LWT_INFO_NTHD_ZOMBIES, 
     /* number of active channels */
-    LWT_INFO_NCHAN
+    LWT_INFO_NCHAN, 
     /* number of threads blocked sedning */
-    LWT_INFO_NSNDING
+    LWT_INFO_NSNDING, 
     /* number of threads blocked receiving */
     LWT_INFO_NRCVING
 }
