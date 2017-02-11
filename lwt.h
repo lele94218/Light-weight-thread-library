@@ -29,7 +29,7 @@ typedef void * (*lwt_fn_t)(void *);
 
 
 /* User info argument type.  */
-typedef enum lwt_info_t
+enum lwt_info_t
 {
     /* The thread is running. */
     LWT_INFO_NTHD_RUNNABLE = 0,
@@ -45,7 +45,7 @@ typedef enum lwt_info_t
     LWT_INFO_NRCVING
 };
 
-typedef enum lwt_status
+enum lwt_status
 {
     /* The thread is running. */
     LWT_STATUS_RUNNABLE = 0,

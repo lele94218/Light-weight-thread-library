@@ -312,7 +312,7 @@ lwt_id(lwt_t input_thread)
 
 /* return the informatin of current thread status */
 int
-lwt_info(lwt_info_t t)
+lwt_info(enum lwt_info_t t)
 {
     int cnt = 0;
     struct list * current;
