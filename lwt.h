@@ -29,7 +29,7 @@ typedef void * (*lwt_fn_t)(void *);
 typedef void * (*lwt_chan_fn_t)(lwt_chan_t);
 
 /* User info argument type.  */
-typedef enum _lwt_info_t
+typedef enum lwt_info_t
 {
     /* The thread is running. */
     LWT_INFO_NTHD_RUNNABLE = 0,
@@ -43,10 +43,9 @@ typedef enum _lwt_info_t
     LWT_INFO_NSNDING, 
     /* number of threads blocked receiving */
     LWT_INFO_NRCVING
-}
-lwt_info_t;
+};
 
-typedef enum _lwt_status
+typedef enum lwt_status
 {
     /* The thread is running. */
     LWT_STATUS_RUNNABLE = 0,
@@ -54,8 +53,7 @@ typedef enum _lwt_status
     LWT_STATUS_BLOCKED,
     /* This is a zombie thread. */
     LWT_STATUS_ZOMBIES
-}
-lwt_status;
+};
 
 /* define the context of a thread */
 struct _lwt_context
@@ -94,7 +92,6 @@ struct _lwt_t
     
     /* Thread context */
     struct _lwt_context context;
-    
 };
 typedef struct _lwt_t * lwt_t;
 
@@ -120,7 +117,7 @@ void lwt_die(void *);
 int lwt_yield(lwt_t  strong_thread);
 lwt_t lwt_current();
 int lwt_id(lwt_t  input_thread);
-int lwt_info(lwt_info_t t);
+int lwt_info(enum lwt_info_t t);
 
 /* Function declaration for lwt thread channel operation */
 lwt_chan_t lwt_chan (int sz);
@@ -130,4 +127,5 @@ void *lwt_rcv(lwt_chan_t c);
 int lwt_snd_chan(lwt_chan_t c, lwt_chan_t sending);
 lwt_chan_t lwt_rcv_chan(lwt_chan_t c);
 lwt_t lwt_create_chan(lwt_chan_fn_t fn, lwt_chan_t c);
+
 #endif
