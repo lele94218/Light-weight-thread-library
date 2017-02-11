@@ -387,7 +387,16 @@ int lwt_snd(lwt_chan_t channel, void * data)
 return 0;}
 
 void *lwt_rcv(lwt_chan_t c)
-{return  NULL;}
+{
+    if (c->sender_queue.next) {
+        (lwt_t)((int)(c->sender_queue.next)-offset_sender)->status == LWT_STATUS_RUNNABLE;
+    }
+    else
+    {
+        
+    }
+    return  NULL;
+}
 
 int lwt_snd_chan(lwt_chan_t c, lwt_chan_t sending)
 {return 0;}
