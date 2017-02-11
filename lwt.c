@@ -415,15 +415,18 @@ int lwt_snd(lwt_chan_t chan, void * data)
     {
         return -1;
     }
-    if (chan->receiver->status==LWT_STATUS_BLOCKED&&chan->receiver->block_for==BLOCKED_RECEIVING)
-    {
-    
-    }
     current_thread->message_data=data;
     __add_to_tail_chan(current_thread, &(chan->sender_queue));
-    current_thread->status = LWT_STATUS_BLOCKED;
     __remove_from_queue(current_thread);
     __add_to_tail(current_thread, &block_queue);
+    current_thread->status = LWT_STATUS_BLOCKED;
+    current_thread->block_for=BLOCKED_SENDING;
+    if (chan->receiver->status==LWT_STATUS_BLOCKED&&chan->receiver->block_for==BLOCKED_RECEIVING)
+    {
+        chan->receiver->status==LWT_STATUS_RUNNABLE;
+        __remove_from_queue_chan(chan->receiver);
+        __add_to_head_chan(chan->receiver, &valid_queue);
+    }
     __lwt_schedule();
     return 0;
 }
