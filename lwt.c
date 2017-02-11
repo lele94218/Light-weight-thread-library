@@ -344,5 +344,15 @@ lwt_info(enum lwt_info_t t)
     
 }
 
+/* create a channel in the current thread */
+lwt_chan_t lwt_chan(int size)
+{
+    lwt_chan_t chan=(lwt_chan_t)malloc(sizeof(struct lwt_channel));
+    chan->receiver=current_thread;
+    return chan;
+}
+
+
+
 
 
