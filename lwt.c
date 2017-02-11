@@ -377,11 +377,12 @@ __remove_from_queue_chan(lwt_t thread)
 }
 
 /* create a thread with initial channel */
-lwt_t lwt_create_chan(lwt_chan_fn_t fn, lwt_chan_t input_channel)
+lwt_t lwt_create_chan(lwt_chan_fn_t fn, lwt_chan_t chan)
 {
-    lwt_t created_thread = lwt_create((void *)fn, (void *)input_channel);
-    input_channel -> receiver = created_thread;
-    input_channel -> reference_counter += 1;
+    lwt_t created_thread = lwt_create((void *)fn, (void *)chan);
+    chan -> receiver = created_thread;
+    chan->sender_count+=1;
+    chan -> reference_counter += 1;
     return created_thread;
 }
 /* create a channel in the current thread */
@@ -396,25 +397,27 @@ lwt_chan_t lwt_chan(int size)
     return chan;
 }
 
-void lwt_chan_deref (lwt_chan_t c)
+void lwt_chan_deref (lwt_chan_t chan)
 {
-    c->reference_counter--;
-    printf("thread %d has de-ref channel %d, refs left: %d.\n", current_thread->lwt_id, c->chan_id, c->reference_counter);
-    if (c->reference_counter == 0) {
-        free(c);
+    chan->reference_counter--;
+    printf("thread %d has de-ref channel %d, refs left: %d.\n", current_thread->lwt_id, chan->chan_id, chan->reference_counter);
+    if (chan->reference_counter == 0) {
+        free(chan);
     }
 }
 
-int lwt_snd(lwt_chan_t channel, void * data)
+int lwt_snd(lwt_chan_t chan, void * data)
 {
-    if (channel->sender_queue.next!=&(channel->sender_queue))
+    if (chan->receiver==NULL)
     {
-    __add_to_tail_chan(current_thread, &(channel->sender_queue));
+        return -1;
+    }
+    current_thread->message_data=data;
+    __add_to_tail_chan(current_thread, &(chan->sender_queue));
     current_thread->status = LWT_STATUS_BLOCKED;
     __remove_from_queue(current_thread);
     __add_to_tail(current_thread, &block_queue);
     __lwt_schedule();
-    }
     return 0;
 }
 
