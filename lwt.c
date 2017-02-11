@@ -373,9 +373,12 @@ lwt_chan_t lwt_chan(int size)
 void lwt_chan_deref (lwt_chan_t c)
 {}
 
-int lwt_snd(lwt_chan_t c, void * data)
+int lwt_snd(lwt_chan_t channel, void * data)
 {
+    if (channel->sender_queue.next!=channel->sender_queue)
+    {
 
+    }
 return 0;}
 
 void *lwt_rcv(lwt_chan_t c)
