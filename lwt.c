@@ -12,6 +12,8 @@ void __initiate (void) __attribute__((constructor));
 
 /* used for assigning thread id */
 int lwt_counter = 0;
+const int offset_thread = (int)(&(((lwt_t)0)->linked_list));
+const int offset_sender = (int)(&(((lwt_t)0)->sender_queue));
 
 /* three queues, one for thread either waiting or running, one for zombies, one for recycle */
 struct list valid_queue;
@@ -118,7 +120,7 @@ inline void
 __lwt_schedule ()
 {
     old_thread = current_thread;
-    current_thread = (lwt_t)(valid_queue.next);
+    current_thread = (lwt_t)((int)valid_queue.next-offset_thread);
     printd("thread %d start executing from reschedule\n", current_thread->lwt_id);
     __lwt_dispatch(thread_context(old_thread), thread_context(current_thread));
 }
@@ -158,7 +160,7 @@ lwt_create(lwt_fn_t fn, void * data)
     
     if (recycle_queue.next != &recycle_queue) {
         /* Noempty recycle queue */
-        next_thread = (lwt_t)(recycle_queue.next);
+        next_thread = (lwt_t)((int)recycle_queue.next-offset_thread);
         __remove_from_queue(next_thread);
         _sp = next_thread->init_sp;
     }
@@ -302,6 +304,13 @@ lwt_join(lwt_t thread_to_wait)
     
     return current_thread->last_word;
 }
+/* return current thread */
+lwt_t
+lwt_current()
+{
+    printf("offset is %d, and %d\n", offset_thread, offset_sender);
+    return current_thread;
+}
 
 /* return the id of a thread */
 int
@@ -341,11 +350,18 @@ lwt_info(enum lwt_info_t t)
         current = current->next;
     }
     return cnt;
-    
 }
 
+/* Below functions are related to thread communication */
+/*
+lwt_t lwt_create_chan(lwt_chan_fn_t fn, lwt_chan_t input_channel)
+{
+    lwt_t created_thread = lwt_create(fn, input_channel);
+    input_channel -> receiver = created_thread;
+    input_channel ->sender???????????
+}*/
 /* create a channel in the current thread */
-lwt_chan_t lwt_chan(int size)
+/*lwt_chan_t lwt_chan(int size)
 {
     lwt_chan_t chan=(lwt_chan_t)malloc(sizeof(struct lwt_channel));
     chan->receiver=current_thread;
@@ -353,8 +369,7 @@ lwt_chan_t lwt_chan(int size)
     return chan;
 }
 
-
-
+*/
 
 
 

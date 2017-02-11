@@ -174,6 +174,6 @@ main(void)
 {
 	test_perf();
 	test_crt_join_sched();
-
+	lwt_current();
 	return 0;
 }
