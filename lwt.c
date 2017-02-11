@@ -399,9 +399,14 @@ lwt_chan_t lwt_chan(int size)
 
 void lwt_chan_deref (lwt_chan_t chan)
 {
-    chan->reference_counter--;
-    printf("thread %d has de-ref channel %d, refs left: %d.\n", current_thread->lwt_id, chan->chan_id, chan->reference_counter);
-    if (chan->reference_counter == 0) {
+    if (chan->receiver==current_thread)
+    {
+        chan->receiver==NULL;
+        printf("thread %d is nolonger receiver of channel %d.\n", current_thread->lwt_id, chan->chan_id);
+    }
+    else chan->sender_count--;
+    printf("thread %d has de-ref channel %d, sender left: %d.\n", current_thread->lwt_id, chan->chan_id, chan->sender_count);
+    if (chan->sender_count == 0&&chan->receiver==NULL) {
         free(chan);
     }
 }
