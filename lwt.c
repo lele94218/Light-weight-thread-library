@@ -381,8 +381,7 @@ lwt_t lwt_create_chan(lwt_chan_fn_t fn, lwt_chan_t chan)
 {
     lwt_t created_thread = lwt_create((void *)fn, (void *)chan);
     chan -> receiver = created_thread;
-    chan->sender_count+=1;
-    chan -> reference_counter += 1;
+    chan-> sender_count+=1;
     return created_thread;
 }
 /* create a channel in the current thread */
@@ -391,7 +390,6 @@ lwt_chan_t lwt_chan(int size)
     lwt_chan_t chan=(lwt_chan_t)malloc(sizeof(struct lwt_channel));
     chan->receiver=current_thread;
     chan->sender_count=0;
-    chan->reference_counter=1;
     chan->chan_id=chan_counter++;
     printf("thread %d has created channel %d.\n", current_thread->lwt_id, chan->chan_id);
     return chan;
@@ -416,6 +414,10 @@ int lwt_snd(lwt_chan_t chan, void * data)
     if (chan->receiver==NULL)
     {
         return -1;
+    }
+    if (chan->receiver->status==LWT_STATUS_BLOCKED&&chan->receiver->block_for==BLOCKED_RECEIVING)
+    {
+    
     }
     current_thread->message_data=data;
     __add_to_tail_chan(current_thread, &(chan->sender_queue));

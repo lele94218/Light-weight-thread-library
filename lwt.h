@@ -54,6 +54,16 @@ enum lwt_status
     LWT_STATUS_ZOMBIES
 };
 
+enum block_reason
+{
+    /* The thread is running. */
+    BLOCKED_JOIN = 0,
+    /* The thread is blocked. */
+    BLOCKED_RECEIVING,
+    /* This is a zombie thread. */
+    BLOCKED_SENDING,
+};
+
 /* define the context of a thread */
 struct _lwt_context
 {
@@ -81,7 +91,10 @@ struct _lwt_t
     t_id lwt_id;
 
     /* the status of a thread */
-    t_stat status;
+    enum lwt_status status;
+
+    /* the reason for blockage */
+    enum block_reason block_for;
 
     /* thread regarding join */
     struct _lwt_t * merge_to;
