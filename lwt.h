@@ -26,6 +26,7 @@ typedef int t_stat;
 
 /* define a function pointer */
 typedef void * (*lwt_fn_t)(void *);
+typedef void * (*lwt_chan_fn_t)(lwt_chan_t);
 
 /* User info argument type.  */
 typedef enum _lwt_info_t
@@ -35,7 +36,13 @@ typedef enum _lwt_info_t
     /* The thread is blocked. */
     LWT_INFO_NTHD_BLOCKED,
     /* This is a zombie thread. */
-    LWT_INFO_NTHD_ZOMBIES
+    LWT_INFO_NTHD_ZOMBIES, 
+    /* number of active channels */
+    LWT_INFO_NCHAN, 
+    /* number of threads blocked sedning */
+    LWT_INFO_NSNDING, 
+    /* number of threads blocked receiving */
+    LWT_INFO_NRCVING
 }
 lwt_info_t;
 
@@ -119,9 +126,8 @@ int lwt_info(lwt_info_t t);
 lwt_chan_t lwt_chan (int sz);
 void lwt_chan_deref (lwt_chan_t c);
 int lwt_snd(lwt_chan_t c, void * data);
-
-
-
-
-
+void *lwt_rcv(lwt_chan_t c);
+int lwt_snd_chan(lwt_chan_t c, lwt_chan_t sending);
+lwt_chan_t lwt_rcv_chan(lwt_chan_t c);
+lwt_t lwt_create_chan(lwt_chan_fn_t fn, lwt_chan_t c);
 #endif
