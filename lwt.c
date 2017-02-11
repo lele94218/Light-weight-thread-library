@@ -371,6 +371,20 @@ lwt_chan_t lwt_chan(int size)
     return chan;
 }
 
+void lwt_chan_deref (lwt_chan_t c)
+{}
+
+int lwt_snd(lwt_chan_t c, void * data)
+{return 0;}
+
+void *lwt_rcv(lwt_chan_t c)
+{return  NULL;}
+
+int lwt_snd_chan(lwt_chan_t c, lwt_chan_t sending)
+{return 0;}
+
+lwt_chan_t lwt_rcv_chan(lwt_chan_t c)
+{return NULL;}
 
 
 
