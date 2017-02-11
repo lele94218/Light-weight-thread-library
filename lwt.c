@@ -429,15 +429,19 @@ int lwt_snd(lwt_chan_t chan, void * data)
 void *lwt_rcv(lwt_chan_t c)
 {
     void * result;
-    if (c->sender_queue.next) {
-        ((lwt_t)((int)(c->sender_queue.next)-offset_sender))->status = LWT_STATUS_RUNNABLE;
-        result = ((lwt_t)((int)(c->sender_queue.next)-offset_sender))->message_data;
-        ((lwt_t)((int)(c->sender_queue.next)-offset_sender))->message_data = NULL;
+    if (c->sender_queue.next!=&(c->sender_queue)) {
+        lwt_t sender = ((lwt_t)((int)(c->sender_queue.next)-offset_sender));
+        sender->status = LWT_STATUS_RUNNABLE;
+        result = sender->message_data;
+        sender->message_data = NULL;
+        __remove_from_queue_chan(sender);
         return result;
     }
     else
     {
-        
+        current_thread->status = LWT_STATUS_BLOCKED;
+        __add_to_tail(current_thread, &block_queue);
+        __lwt_schedule();
     }
     return  NULL;
 }
