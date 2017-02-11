@@ -82,7 +82,7 @@ struct _lwt_t
 
     /* the status of a thread */
     t_stat status;
-    
+
     /* thread regarding join */
     struct _lwt_t * merge_to;
     

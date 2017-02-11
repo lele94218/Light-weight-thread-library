@@ -160,7 +160,7 @@ lwt_create(lwt_fn_t fn, void * data)
     
     if (recycle_queue.next != &recycle_queue) {
         /* Noempty recycle queue */
-        next_thread = (lwt_t)(recycle_queue.next);
+        next_thread = (lwt_t)((int)recycle_queue.next-offset_thread);
         __remove_from_queue(next_thread);
         _sp = next_thread->init_sp;
     }
@@ -352,7 +352,6 @@ lwt_info(enum lwt_info_t t)
     return cnt;
 }
 
-<<<<<<< HEAD
 /* Below functions are related to thread communication */
 /*
 lwt_t lwt_create_chan(lwt_chan_fn_t fn, lwt_chan_t input_channel)
@@ -361,9 +360,8 @@ lwt_t lwt_create_chan(lwt_chan_fn_t fn, lwt_chan_t input_channel)
     input_channel -> receiver = created_thread;
     input_channel ->sender???????????
 }*/
-=======
 /* create a channel in the current thread */
-lwt_chan_t lwt_chan(int size)
+/*lwt_chan_t lwt_chan(int size)
 {
     lwt_chan_t chan=(lwt_chan_t)malloc(sizeof(struct lwt_channel));
     chan->receiver=current_thread;
@@ -372,8 +370,6 @@ lwt_chan_t lwt_chan(int size)
     return chan;
 }
 
+*/
 
 
-
-
->>>>>>> c15b67c1706b03073856692fd736dd3f5da61fe4
