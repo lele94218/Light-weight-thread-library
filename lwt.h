@@ -83,6 +83,20 @@ struct _lwt_t
 };
 typedef struct _lwt_t * lwt_t;
 
+/* This structure describes a lwt channel */
+struct lwt_channel
+{
+    /* Linked list */
+    struct list sender_queue;
+
+	/* number of senders of this channel */
+	int sender_count;
+
+	/* receiver thread */
+	struct _lwt_t * receiver
+};
+typedef struct lwt_channel * lwt_chan_t
+
 
 /* Funciton declaration */
 lwt_t  lwt_create(lwt_fn_t fn, void * data);

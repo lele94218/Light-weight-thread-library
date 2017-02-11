@@ -35,7 +35,7 @@ void __initiate(void);
 
 
 
-/* --------------- inline function declarations --------------- */
+/* --------------- inline function definition --------------- */
 
 static inline void
 list_insert(struct list * link, struct list * new_link)
