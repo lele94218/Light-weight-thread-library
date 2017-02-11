@@ -95,16 +95,16 @@ struct lwt_channel
     /* Linked list */
     struct list sender_queue;
 
-	/* number of senders of this channel */
-	int sender_count;
+    /* number of senders of this channel */
+    int sender_count;
 
-	/* receiver thread */
-	struct _lwt_t * receiver
+    /* receiver thread */
+    struct _lwt_t * receiver
 };
 typedef struct lwt_channel * lwt_chan_t
 
 
-/* Funciton declaration */
+/* Funciton declaration for lwt thread operation */
 lwt_t  lwt_create(lwt_fn_t fn, void * data);
 void * lwt_join(lwt_t  thread_to_wait);
 void lwt_die(void *);
@@ -112,5 +112,14 @@ int lwt_yield(lwt_t  strong_thread);
 lwt_t lwt_current();
 int lwt_id(lwt_t  input_thread);
 int lwt_info(lwt_info_t t);
+
+/* Function declaration for lwt thread channel operation */
+lwt_chan_t lwt_chan (int sz);
+void lwt_chan_deref (lwt_chan_t c);
+int lwt_snd(lwt_chan_t c, void * data);
+
+
+
+
 
 #endif
