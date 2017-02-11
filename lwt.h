@@ -26,7 +26,7 @@ typedef int t_stat;
 
 /* define a function pointer */
 typedef void * (*lwt_fn_t)(void *);
-typedef void * (*lwt_chan_fn_t)(lwt_chan_t);
+
 
 /* User info argument type.  */
 typedef enum _lwt_info_t
@@ -111,6 +111,7 @@ struct lwt_channel
     struct _lwt_t * receiver;
 };
 typedef struct lwt_channel * lwt_chan_t;
+typedef void * (*lwt_chan_fn_t)(lwt_chan_t);
 
 
 /* Funciton declaration for lwt thread operation */
