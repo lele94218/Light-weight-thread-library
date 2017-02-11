@@ -24,8 +24,7 @@ typedef unsigned char uchar;
 typedef int t_id;
 typedef int t_stat;
 
-/* define a function pointer */
-typedef void * (*lwt_fn_t)(void *);
+
 
 
 /* User info argument type.  */
@@ -72,12 +71,15 @@ struct list {
 /* This structure describes a LWT thread. */
 struct _lwt_t
 {
-    /* Linked list */
+    /* Linked list in a global thread queue, this struct position is fixed */
     struct list linked_list;
-    
+
+    /* Sender list, its position at a sender queue */
+    struct list sender_queue;
+
     /* Thread id */
     t_id lwt_id;
-    
+
     /* the status of a thread */
     t_stat status;
     
@@ -108,6 +110,9 @@ struct lwt_channel
     struct _lwt_t * receiver;
 };
 typedef struct lwt_channel * lwt_chan_t;
+
+/* define a function pointer */
+typedef void * (*lwt_fn_t)(void *);
 typedef void * (*lwt_chan_fn_t)(lwt_chan_t);
 
 
@@ -119,6 +124,7 @@ int lwt_yield(lwt_t  strong_thread);
 lwt_t lwt_current();
 int lwt_id(lwt_t  input_thread);
 int lwt_info(enum lwt_info_t t);
+lwt_t lwt_current();
 
 /* Function declaration for lwt thread channel operation */
 lwt_chan_t lwt_chan (int sz);
