@@ -12,7 +12,6 @@ int to_send = 7;
 void fun()
 {
     printf("this is thread %d \n",lwt_id(lwt_current()));
-
     lwt_chan_t c0 = lwt_chan(0);
     lwt_chan_t c1 = lwt_chan(0);
     lwt_chan_t c2 = lwt_chan(0);
