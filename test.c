@@ -72,9 +72,8 @@ int main(int argc, char *argv[])
 {
     t1 = lwt_create((void *)fun, NULL);
     lwt_join(t1);
-    printf("main function returned\n");
-    print_all_info();
     lwt_chan(0);
     print_all_info();
+    printf("main function returned\n");
     return 0;
 }
