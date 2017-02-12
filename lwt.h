@@ -36,16 +36,18 @@ enum lwt_info_t
     LWT_INFO_NTHD_BLOCKED,
     /* This is a zombie thread. */
     LWT_INFO_NTHD_ZOMBIES, 
-    /* number of active channels */
-    LWT_INFO_NCHAN, 
+    /* number of threads waiting to be re-used, not freed yet */
+    LWT_INFO_NTHD_RECYCLE, 
     /* number of threads blocked sedning */
     LWT_INFO_NSNDING, 
     /* number of threads blocked receiving */
     LWT_INFO_NRCVING,
+    /* number of threads blocked receiving */
+    LWT_INFO_NJOINING,
+    /* number of active channels */
+    LWT_INFO_NCHAN,
     /* number of dead channels, not freed yet */
-    LWT_INFO_DCHAN, 
-    /* number of threads waiting to be re-used, not freed yet */
-    LWT_INFO_NTHD_RECYCLE, 
+    LWT_INFO_DCHAN,  
 };
 
 enum lwt_status

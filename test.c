@@ -2,6 +2,24 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+void print_all_info()
+{
+    print_queue_content(LWT_INFO_NTHD_RUNNABLE);
+    print_queue_content(LWT_INFO_NTHD_BLOCKED);
+    print_queue_content(LWT_INFO_NTHD_ZOMBIES);
+    print_queue_content(LWT_INFO_NTHD_RECYCLE);
+    print_queue_content(LWT_INFO_NCHAN);
+    print_queue_content(LWT_INFO_DCHAN);
+    printf("number runnable: %d.\n",lwt_info(LWT_INFO_NTHD_RUNNABLE));
+    printf("number blocked: %d.\n",lwt_info(LWT_INFO_NTHD_BLOCKED));
+    printf("number zombies: %d.\n",lwt_info(LWT_INFO_NTHD_ZOMBIES));
+    printf("number recycle: %d.\n",lwt_info(LWT_INFO_NTHD_RECYCLE));
+    printf("number blocked joining: %d.\n",lwt_info(LWT_INFO_NJOINING));
+    printf("number blocked receiving: %d.\n",lwt_info(LWT_INFO_NRCVING));
+    printf("number blocked sending: %d.\n",lwt_info(LWT_INFO_NSNDING));
+    printf("number working channel: %d.\n",lwt_info(LWT_INFO_NCHAN));
+    printf("number dead channel: %d.\n",lwt_info(LWT_INFO_DCHAN));
+}
 lwt_t t1;
 lwt_t t2;
 lwt_t t3;
@@ -12,6 +30,7 @@ int to_send = 7;
 void fun()
 {
     printf("this is thread %d \n",lwt_id(lwt_current()));
+
     lwt_chan_t c0 = lwt_chan(0);
     lwt_chan_t c1 = lwt_chan(0);
     lwt_chan_t c2 = lwt_chan(0);
@@ -39,6 +58,7 @@ void fun()
     received = (int) lwt_rcv(c_itself);
     printf("thread t1 has received: %d\n", received);
     lwt_chan_deref(c_itself);
+    print_all_info();
 }
 void fun1(lwt_chan_t c)
 {

@@ -331,6 +331,7 @@ lwt_join(lwt_t thread_to_wait)
     printd("thread %d blocked, waiting for thread %d to join\n", current_thread->lwt_id, thread_to_wait->lwt_id);
     
     current_thread->status = LWT_STATUS_BLOCKED;
+    current_thread->block_for = BLOCKED_JOIN;
     
     /* Move to blocked queue */
     __remove_from_thread_queue(current_thread);
@@ -464,38 +465,57 @@ lwt_chan_t lwt_rcv_chan(lwt_chan_t chan)
 
 
 /* debugging functions */
+int __get_queue_size(struct list * input_list)
+{
+    int cnt = 0;
+    struct list * curr = input_list->next;
+    while (curr!=input_list)
+    {
+        cnt++;
+        curr=curr->next;
+    }
+    return cnt;
+}
+
+int __get_blocked_queue_size(enum block_reason block_for)
+{
+    int cnt = 0;
+    struct list * curr = block_queue.next;
+    while (curr!=(&block_queue)) 
+    {
+        if(((lwt_t) ((int)curr-offset_thread))->block_for == block_for) cnt++;
+        curr=curr->next;
+    }
+    return cnt;
+}
 
 /* return the informatin of current thread status */
 int
 lwt_info(enum lwt_info_t t)
 {
-    int cnt = 0;
-    struct list * current;
-    struct list * head;
-    
     switch (t) {
-        case LWT_INFO_NTHD_ZOMBIES:
-            current = zombie_queue.next;
-            head = &zombie_queue;
-            break;
-            
+        case LWT_INFO_NTHD_RUNNABLE:
+            return __get_queue_size(&run_queue);
         case LWT_INFO_NTHD_BLOCKED:
-            current = block_queue.next;
-            head = &block_queue;
-            break;
-            
+            return __get_queue_size(&block_queue);
+        case LWT_INFO_NTHD_ZOMBIES:
+            return __get_queue_size(&zombie_queue);
+        case LWT_INFO_NTHD_RECYCLE:
+            return __get_queue_size(&recycle_queue);
+        case LWT_INFO_NCHAN:
+            return __get_queue_size(&chan_working);
+        case LWT_INFO_DCHAN:
+            return __get_queue_size(&chan_dead);
+        case LWT_INFO_NSNDING:
+            return __get_blocked_queue_size(BLOCKED_SENDING);
+        case LWT_INFO_NRCVING:
+            return __get_blocked_queue_size(BLOCKED_RECEIVING);
+        case LWT_INFO_NJOINING:
+            return __get_blocked_queue_size(BLOCKED_JOIN);
         default:
-            current = run_queue.next;
-            head = &run_queue;
-            break;
+            printf("cannot identify printing instructions\n");
+            return -1;
     }
-    
-    while (current != head)
-    {
-        cnt ++;
-        current = current->next;
-    }
-    return cnt;
 }
 
 void __print_a_thread_queue(struct list * list_to_print)
@@ -503,7 +523,14 @@ void __print_a_thread_queue(struct list * list_to_print)
     struct list * curr = list_to_print->next;
     while (curr!=list_to_print)
     {
-        printf("thread %d.\n",((lwt_t)((int)curr-offset_thread))->lwt_id);
+        if (list_to_print == &block_queue)
+        {
+            printf("thread %d blocked with reason: ",((lwt_t)((int)curr-offset_thread))->lwt_id);
+            if (((lwt_t)((int)curr-offset_thread))->block_for == BLOCKED_JOIN) printf("joining.\n");
+            else if (((lwt_t)((int)curr-offset_thread))->block_for == BLOCKED_RECEIVING) printf("receiving.\n");
+            else printf("sending.\n");
+        }
+        else printf("thread %d.\n",((lwt_t)((int)curr-offset_thread))->lwt_id);
         curr=curr->next;
     }
 }
@@ -547,15 +574,6 @@ void print_queue_content(enum lwt_info_t input)
             printf("dead channel showed as below: \n");
             __print_a_chan_queue(&chan_dead);
             break;
-        case LWT_INFO_NSNDING:
-            printf("threads blocked for sending showed as below: \n");
-            //__print_a_chan_queue(&chan_dead);
-            break;
-        case LWT_INFO_NRCVING:
-            printf("threads blocked for receiving showed as below: \n");
-            //__print_a_chan_queue(&chan_dead);
-            break;
-
         default:
             printf("cannot identify printing instructions\n");
             break;
