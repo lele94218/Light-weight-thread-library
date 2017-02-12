@@ -379,6 +379,7 @@ lwt_t lwt_create_chan(lwt_chan_fn_t fn, lwt_chan_t chan)
     lwt_t created_thread = lwt_create((void *)fn, (void *)chan);
     chan -> receiver = created_thread;
     chan-> sender_count+=1;
+    printf("thread %d has created thread %d with channel %d.\n", current_thread->lwt_id, created_thread->lwt_id,chan->chan_id);
     return created_thread;
 }
 /* create a channel in the current thread */
@@ -388,6 +389,7 @@ lwt_chan_t lwt_chan(int size)
     chan->receiver = current_thread;
     chan->sender_count = 0;
     chan->chan_id = chan_counter++;
+    list_init(&(chan->sender_queue));
     printf("thread %d has created channel %d.\n", current_thread->lwt_id, chan->chan_id);
     return chan;
 }
@@ -413,11 +415,14 @@ int lwt_snd(lwt_chan_t chan, void * data)
         printf("thread %d has send data to channel %d, but no receiver.\n", current_thread->lwt_id, chan->chan_id);
         return -1;
     }
+    printf("sending start1\n");
     current_thread->message_data = data;
+    printf("current_thread: %d, channel: %d\n", current_thread->lwt_id, chan->chan_id);
     __add_to_tail_chan(current_thread, &(chan->sender_queue));
     __remove_from_queue(current_thread);
     __add_to_tail(current_thread, &block_queue);
     current_thread->status = LWT_STATUS_BLOCKED;
+    printf("sending start3\n");
     current_thread->block_for = BLOCKED_SENDING;
     printf("thread %d is waiting for receiver of channel %d.\n", current_thread->lwt_id, chan->chan_id);
     if (chan->receiver->status == LWT_STATUS_BLOCKED && chan->receiver->block_for == BLOCKED_RECEIVING)
