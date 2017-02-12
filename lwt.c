@@ -415,16 +415,14 @@ int lwt_snd(lwt_chan_t chan, void * data)
         printf("thread %d has send data to channel %d, but no receiver.\n", current_thread->lwt_id, chan->chan_id);
         return -1;
     }
-    printf("sending start1\n");
     current_thread->message_data = data;
     printf("current_thread: %d, channel: %d\n", current_thread->lwt_id, chan->chan_id);
     __add_to_tail_chan(current_thread, &(chan->sender_queue));
     __remove_from_queue(current_thread);
     __add_to_tail(current_thread, &block_queue);
     current_thread->status = LWT_STATUS_BLOCKED;
-    printf("sending start3\n");
     current_thread->block_for = BLOCKED_SENDING;
-    printf("thread %d is waiting for receiver of channel %d.\n", current_thread->lwt_id, chan->chan_id);
+    printf("thread %d is waiting for channel %d's receiver thread %d.\n", current_thread->lwt_id, chan->chan_id, chan->receiver->lwt_id);
     if (chan->receiver->status == LWT_STATUS_BLOCKED && chan->receiver->block_for == BLOCKED_RECEIVING)
     {
         chan->receiver->status = LWT_STATUS_RUNNABLE;

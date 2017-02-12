@@ -18,8 +18,8 @@ void fun()
 void fun1(lwt_chan_t c)
 {
     printf("this is thread %d \n",lwt_id(lwt_current()));
-    //void * result = lwt_rcv(c);
-    printf("end\n");
+    int * result = lwt_rcv(c);
+    printf("data %d received, end\n", *result);
 }
 int main(int argc, char *argv[])
 {
@@ -27,5 +27,6 @@ int main(int argc, char *argv[])
     int p=7;
 //    t2 = lwt_create((void *)fun1, NULL);
     lwt_join(t1);
+    printf("main function returned\n");
     return 0;
 }

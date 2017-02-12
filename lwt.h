@@ -1,7 +1,7 @@
 #ifndef LWT_H
 #define LWT_H
 
-
+#define DEBUG
 /* turn this on will enable error check for user input */
 
 #ifdef DEBUG
