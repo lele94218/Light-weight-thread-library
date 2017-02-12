@@ -388,6 +388,8 @@ lwt_chan_t lwt_chan(int size)
     chan->receiver = current_thread;
     chan->sender_count = 0;
     chan->chan_id = chan_counter++;
+    chan->sender_queue.next = &chan->sender_queue;
+    chan->sender_queue.prev = &chan->sender_queue;
     printf("thread %d has created channel %d.\n", current_thread->lwt_id, chan->chan_id);
     return chan;
 }
