@@ -474,6 +474,7 @@ lwt_chan_t lwt_rcv_chan(lwt_chan_t chan)
     return (lwt_chan_t)lwt_rcv(chan);
 }
 
+/* below are functions regarding global channel management and recycling */
 
 
 

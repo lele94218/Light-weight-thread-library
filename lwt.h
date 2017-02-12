@@ -113,6 +113,16 @@ struct _lwt_t
 };
 typedef struct _lwt_t * lwt_t;
 
+/* channel status, either working or ready for recycling */
+enum lwt_status
+{
+    /* The thread is running. */
+    LWT_STATUS_RUNNABLE = 0,
+    /* The thread is blocked. */
+    LWT_STATUS_BLOCKED,
+    /* This is a zombie thread. */
+    LWT_STATUS_ZOMBIES
+};
 /* This structure describes a lwt channel */
 struct lwt_channel
 {
@@ -121,6 +131,9 @@ struct lwt_channel
 
     /* Linked list */
     struct list sender_queue;
+
+    /* Linked list */
+    struct list chan_pool;
 
     /* number of senders of this channel */
     int sender_count;
