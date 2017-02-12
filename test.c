@@ -20,17 +20,17 @@ void fun()
     lwt_chan_t c4 = lwt_chan(0);
     lwt_chan_t c5 = lwt_chan(0);
     lwt_chan_t c_itself = lwt_chan(0);
-
+    printf ("*****now t1's own channel has %d senders.\n", c_itself->sender_count);
     lwt_t t2 = lwt_create_chan((void *)fun1,c2);
     lwt_t t3 = lwt_create_chan((void *)fun1,c3);
     lwt_t t4 = lwt_create_chan((void *)fun1,c4);
     lwt_t t5 = lwt_create_chan((void *)fun1,c5);
-
+    printf ("*****now t1's own channel has %d senders.\n", c_itself->sender_count);
     lwt_snd_chan(c2, c_itself);
     lwt_snd_chan(c3, c_itself);
     lwt_snd_chan(c4, c_itself);
     lwt_snd_chan(c5, c_itself);
-
+    printf ("******now t1's own channel has %d senders.\n", c_itself->sender_count);
     int received = (int) lwt_rcv(c_itself);
     printf("thread t1 has received: %d\n", received);
     received = (int) lwt_rcv(c_itself);
@@ -39,6 +39,7 @@ void fun()
     printf("thread t1 has received: %d\n", received);
     received = (int) lwt_rcv(c_itself);
     printf("thread t1 has received: %d\n", received);
+    lwt_chan_deref(c_itself);
 }
 void fun1(lwt_chan_t c)
 {
@@ -46,6 +47,7 @@ void fun1(lwt_chan_t c)
     lwt_chan_t  using_channel = lwt_rcv_chan(c);
     lwt_snd(using_channel, (void *)lwt_id(lwt_current()));
     printf("thread %d has complete data sent to t1\n", lwt_id(lwt_current()));
+    lwt_chan_deref(using_channel);
 }
 int main(int argc, char *argv[])
 {

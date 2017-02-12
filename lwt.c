@@ -404,6 +404,7 @@ void lwt_chan_deref (lwt_chan_t chan)
     else chan->sender_count--;
     printd("thread %d has de-ref channel %d, sender left: %d.\n", current_thread->lwt_id, chan->chan_id, chan->sender_count);
     if (chan->sender_count == 0 && chan->receiver == NULL) {
+        printd("channel %d has been freed from memory.\n", chan->chan_id);
         free(chan);
     }
 }
