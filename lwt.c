@@ -38,7 +38,8 @@ void * __lwt_trampoline(lwt_fn_t fn, void * data);
 void __initiate(void);
 void __print_a_thread_queue(struct list *);
 void __print_a_chan_queue(struct list *);
-
+int __get_queue_size(struct list * input_list);
+int __get_blocked_queue_size(enum block_reason block_for);
 
 
 /* --------------- inline function definition --------------- */
@@ -358,7 +359,15 @@ lwt_id(lwt_t input_thread)
 }
 
 /* Below functions are related to thread communication */
-
+/* initiate a channel */
+void __init_chan(lwt_chan_t chan)
+{
+    chan->receiver = current_thread;
+    chan->sender_count = 0;
+    chan->chan_id = chan_counter++;
+    list_init(&(chan->sender_queue));
+    __add_to_tail_chan_queue (chan, &chan_working);
+}
 
 /* create a thread with initial channel */
 lwt_t lwt_create_chan(lwt_chan_fn_t fn, lwt_chan_t chan)
@@ -372,11 +381,18 @@ lwt_t lwt_create_chan(lwt_chan_fn_t fn, lwt_chan_t chan)
 /* create a channel in the current thread */
 lwt_chan_t lwt_chan(int size)
 {
-    lwt_chan_t chan = (lwt_chan_t)malloc(sizeof(struct lwt_channel));
-    chan->receiver = current_thread;
-    chan->sender_count = 0;
-    chan->chan_id = chan_counter++;
-    list_init(&(chan->sender_queue));
+    lwt_chan_t chan;
+    if (chan_dead.next!= &chan_dead)
+    {
+        chan = (lwt_chan_t)((int)chan_dead.next-offset_chan);
+        __remove_from_chan_queue(chan);
+        printd("create one channel from dead channel pool.\n");
+    }
+    else
+    {
+        chan = (lwt_chan_t)malloc(sizeof(struct lwt_channel));
+    }
+    __init_chan(chan);
     printd("thread %d has created channel %d.\n", current_thread->lwt_id, chan->chan_id);
     return chan;
 }
@@ -392,9 +408,9 @@ void lwt_chan_deref (lwt_chan_t chan)
     printd("thread %d has de-ref channel %d, sender left: %d.\n", current_thread->lwt_id, chan->chan_id, chan->sender_count);
     if (chan->sender_count == 0 && chan->receiver == NULL) {
         printd("channel %d has been freed from memory.\n", chan->chan_id);
-        //__remove_from_chan_queue(chan);
-        //__add_to_tail_chan_queue (chan, &chan_dead);
-        free(chan);
+        __remove_from_chan_queue(chan);
+        __add_to_tail_chan_queue (chan, &chan_dead);
+        //free(chan);
     }
 }
 
@@ -465,6 +481,7 @@ lwt_chan_t lwt_rcv_chan(lwt_chan_t chan)
 
 
 /* debugging functions */
+/* get a queue size */
 int __get_queue_size(struct list * input_list)
 {
     int cnt = 0;
@@ -477,6 +494,7 @@ int __get_queue_size(struct list * input_list)
     return cnt;
 }
 
+/* get the size of blocked thread with a particular block reason */
 int __get_blocked_queue_size(enum block_reason block_for)
 {
     int cnt = 0;
@@ -518,6 +536,7 @@ lwt_info(enum lwt_info_t t)
     }
 }
 
+/* print the content of a thread queue */
 void __print_a_thread_queue(struct list * list_to_print)
 {
     struct list * curr = list_to_print->next;
@@ -535,21 +554,22 @@ void __print_a_thread_queue(struct list * list_to_print)
     }
 }
 
+/* print the content of a channel queue */
 void __print_a_chan_queue(struct list * list_to_print)
 {
     struct list * curr = list_to_print->next;
     while (curr!=list_to_print)
     {
-        printf("thread %d.\n",((lwt_chan_t)((int)curr-offset_chan))->chan_id);
+        printf("channel %d.\n",((lwt_chan_t)((int)curr-offset_chan))->chan_id);
         curr=curr->next;
     }
 }
 
+/* print the content of a queue */
 void print_queue_content(enum lwt_info_t input)
 {
     switch (input)
     {
-
         case LWT_INFO_NTHD_RUNNABLE:
             printf("runnable queue showed as below: \n");
             __print_a_thread_queue(&run_queue);

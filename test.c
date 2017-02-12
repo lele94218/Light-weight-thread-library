@@ -58,7 +58,6 @@ void fun()
     received = (int) lwt_rcv(c_itself);
     printf("thread t1 has received: %d\n", received);
     lwt_chan_deref(c_itself);
-    print_all_info();
 }
 void fun1(lwt_chan_t c)
 {
@@ -73,6 +72,8 @@ int main(int argc, char *argv[])
     t1 = lwt_create((void *)fun, NULL);
     lwt_join(t1);
     printf("main function returned\n");
-
+    print_all_info();
+    lwt_chan(0);
+    print_all_info();
     return 0;
 }
