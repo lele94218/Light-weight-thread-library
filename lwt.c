@@ -439,7 +439,7 @@ void *lwt_rcv(lwt_chan_t chan)
         return NULL;
     }
     void * result;
-    if (chan->sender_queue.next == &(chan->sender_queue)
+    if (chan->sender_queue.next == &(chan->sender_queue))
     {
         current_thread->status = LWT_STATUS_BLOCKED;
         current_thread->block_for = BLOCKED_RECEIVING;
