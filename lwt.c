@@ -447,7 +447,7 @@ void *lwt_rcv(lwt_chan_t chan)
         __add_to_tail(current_thread, &block_queue);
         __lwt_schedule();
     }
-    lwt_t sender = (lwt_t)( (int) (chan->sender_queue.next)-offset_sender) );
+    lwt_t sender = (lwt_t)( (int) (chan->sender_queue.next)-offset_sender);
     sender->status = LWT_STATUS_RUNNABLE;
     result = sender->message_data;
     __remove_from_queue(sender);
