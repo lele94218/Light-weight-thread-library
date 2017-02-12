@@ -410,6 +410,7 @@ int lwt_snd(lwt_chan_t chan, void * data)
 {
     if (chan->receiver == NULL)
     {
+        printf("thread %d has send data to channel %d, but no receiver.\n", current_thread->lwt_id, chan->chan_id);
         return -1;
     }
     current_thread->message_data = data;
@@ -418,11 +419,13 @@ int lwt_snd(lwt_chan_t chan, void * data)
     __add_to_tail(current_thread, &block_queue);
     current_thread->status = LWT_STATUS_BLOCKED;
     current_thread->block_for = BLOCKED_SENDING;
+    printf("thread %d is waiting for receiver of channel %d.\n", current_thread->lwt_id, chan->chan_id);
     if (chan->receiver->status == LWT_STATUS_BLOCKED && chan->receiver->block_for == BLOCKED_RECEIVING)
     {
         chan->receiver->status = LWT_STATUS_RUNNABLE;
         __remove_from_queue_chan(chan->receiver);
         __add_to_head_chan(chan->receiver, &valid_queue);
+    printf("thread %d wake up and ready to receive data from channel %d.\n", chan->receiver->lwt_id, chan->chan_id);
     }
     __lwt_schedule();
     return 0;
@@ -430,7 +433,11 @@ int lwt_snd(lwt_chan_t chan, void * data)
 
 void *lwt_rcv(lwt_chan_t chan)
 {
-    if (chan->sender_count == 0) return NULL;
+    if (chan->sender_count == 0)
+    {
+        printf("thread %d is receiving from channel %d with no sender.\n", current_thread->lwt_id, chan->chan_id);
+        return NULL;
+    }
     void * result;
     if (chan->sender_queue.next == &(chan->sender_queue)
     {
@@ -440,7 +447,7 @@ void *lwt_rcv(lwt_chan_t chan)
         __add_to_tail(current_thread, &block_queue);
         __lwt_schedule();
     }
-    lwt_t sender = ((lwt_t)((int)(chan->sender_queue.next)-offset_sender));
+    lwt_t sender = (lwt_t)( (int) (chan->sender_queue.next)-offset_sender) );
     sender->status = LWT_STATUS_RUNNABLE;
     result = sender->message_data;
     __remove_from_queue(sender);
