@@ -41,7 +41,11 @@ enum lwt_info_t
     /* number of threads blocked sedning */
     LWT_INFO_NSNDING, 
     /* number of threads blocked receiving */
-    LWT_INFO_NRCVING
+    LWT_INFO_NRCVING,
+    /* number of dead channels, not freed yet */
+    LWT_INFO_DCHAN, 
+    /* number of threads waiting to be re-used, not freed yet */
+    LWT_INFO_NTHD_RECYCLE, 
 };
 
 enum lwt_status
@@ -81,10 +85,10 @@ struct list {
 /* This structure describes a LWT thread. */
 struct _lwt_t
 {
-    /* Linked list in a global thread queue, this struct position is fixed */
+    /* Linked list node in a global thread queue, this struct position is fixed */
     struct list linked_list;
 
-    /* Sender list, its position at a sender queue */
+    /* Sender list node, its position at a sender queue */
     struct list sender_queue;
 
     /* Thread id */
@@ -113,27 +117,17 @@ struct _lwt_t
 };
 typedef struct _lwt_t * lwt_t;
 
-/* channel status, either working or ready for recycling */
-enum lwt_status
-{
-    /* The thread is running. */
-    LWT_STATUS_RUNNABLE = 0,
-    /* The thread is blocked. */
-    LWT_STATUS_BLOCKED,
-    /* This is a zombie thread. */
-    LWT_STATUS_ZOMBIES
-};
 /* This structure describes a lwt channel */
 struct lwt_channel
 {
     /* channel ID */
     int chan_id;
 
-    /* Linked list */
+    /* Linked list head */
     struct list sender_queue;
 
-    /* Linked list */
-    struct list chan_pool;
+    /* Linked list node */
+    struct list chan_queue;
 
     /* number of senders of this channel */
     int sender_count;
@@ -166,4 +160,6 @@ int lwt_snd_chan(lwt_chan_t c, lwt_chan_t sending);
 lwt_chan_t lwt_rcv_chan(lwt_chan_t c);
 lwt_t lwt_create_chan(lwt_chan_fn_t fn, lwt_chan_t c);
 
+/* debugging function */
+void print_queue_content(enum lwt_info_t);
 #endif

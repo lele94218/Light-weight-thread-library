@@ -15,12 +15,16 @@ int lwt_counter = 0;
 int chan_counter = 0;
 const int offset_thread = (int)(&(((lwt_t)0)->linked_list));
 const int offset_sender = (int)(&(((lwt_t)0)->sender_queue));
+const int offset_chan = (int)(&(((lwt_chan_t)0)->chan_queue));
 
-/* three queues, one for thread either waiting or running, one for zombies, one for recycle */
-struct list valid_queue;
+/* four queues, one for thread running, one for blocking, one for zombies, one for recycle */
+struct list run_queue;
 struct list block_queue;
 struct list recycle_queue;
 struct list zombie_queue;
+/* two channel queues, one for working channel, one for dead channel */
+struct list chan_working;
+struct list chan_dead;
 
 
 /* identify threads */
@@ -32,6 +36,8 @@ lwt_t old_thread;
 void __lwt_schedule (void);
 void * __lwt_trampoline(lwt_fn_t fn, void * data);
 void __initiate(void);
+void __print_a_thread_queue(struct list *);
+void __print_a_chan_queue(struct list *);
 
 
 
@@ -54,29 +60,57 @@ list_init(struct list *list)
     list->prev = list;
 }
 
-
 /* add a thread to tail of a thread queue */
 static inline void
-__add_to_tail (lwt_t thread, struct list * thread_queue)
+__add_to_tail_thread (lwt_t thread, struct list * thread_queue)
 {
     list_insert(thread_queue, &thread->linked_list);
 }
 
 /* add a thread to head of a thread queue */
 static inline void
-__add_to_head (lwt_t thread, struct list * thread_queue)
+__add_to_head_thread (lwt_t thread, struct list * thread_queue)
 {
     list_insert(thread_queue->next, &thread->linked_list);
 }
 
-/* remove a thread from a queue */
+/* remove a thread from a thread queue */
 static inline void
-__remove_from_queue(lwt_t thread)
+__remove_from_thread_queue(lwt_t thread)
 {
     (thread->linked_list.prev)->next = thread->linked_list.next;
     (thread->linked_list.next)->prev = thread->linked_list.prev;
 }
 
+/* add a channel to tail of a channel queue */
+static inline void
+__add_to_tail_chan_queue (lwt_chan_t chan, struct list * chan_queue)
+{
+    list_insert(chan_queue, &chan->chan_queue);
+}
+
+/* remove a channel from a channel queue */
+static inline void
+__remove_from_chan_queue(lwt_chan_t chan)
+{
+    (chan->chan_queue.prev)->next = chan->chan_queue.next;
+    (chan->chan_queue.next)->prev = chan->chan_queue.prev;
+}
+
+/* add a thread to tail of a channel's sender queue */
+static inline void
+__add_to_tail_chan (lwt_t thread, struct list * sender_queue)
+{
+    list_insert(sender_queue, &thread->sender_queue);
+}
+
+/* remove a thread from a a channel's sender queue */
+static inline void
+__remove_from_queue_chan(lwt_t thread)
+{
+    (thread->sender_queue.prev)->next = thread->sender_queue.next;
+    (thread->sender_queue.next)->prev = thread->sender_queue.prev;
+}
 
 /* init a struct of lwt */
 static inline void
@@ -118,7 +152,7 @@ inline void
 __lwt_schedule ()
 {
     old_thread = current_thread;
-    current_thread = (lwt_t)((int)valid_queue.next-offset_thread);
+    current_thread = (lwt_t)((int)run_queue.next-offset_thread);
     printd("thread %d start executing from reschedule\n", current_thread->lwt_id);
     __lwt_dispatch(thread_context(old_thread), thread_context(current_thread));
 }
@@ -131,8 +165,8 @@ __initiate()
     current_thread = (lwt_t) malloc (sizeof(struct _lwt_t));
     __init_thread(current_thread);
     
-    /* initialize valid_queue */
-    list_init(&valid_queue);
+    /* initialize run_queue */
+    list_init(&run_queue);
     
     /* initialize block_queue */
     list_init(&block_queue);
@@ -142,8 +176,14 @@ __initiate()
     
     /* initialize zombie_queue */
     list_init(&zombie_queue);
+
+    /* initialize working channel queue */
+    list_init(&chan_working);
+
+    /* initialize dead channel queue */
+    list_init(&chan_dead);
     
-    __add_to_tail(current_thread, &valid_queue);
+    __add_to_tail_thread(current_thread, &run_queue);
     printd("initialization complete\n");
     
 }
@@ -159,7 +199,7 @@ lwt_create(lwt_fn_t fn, void * data)
     if (recycle_queue.next != &recycle_queue) {
         /* Noempty recycle queue */
         next_thread = (lwt_t)((int)recycle_queue.next-offset_thread);
-        __remove_from_queue(next_thread);
+        __remove_from_thread_queue(next_thread);
         _sp = next_thread->init_sp;
     }
     else
@@ -189,7 +229,7 @@ lwt_create(lwt_fn_t fn, void * data)
     
     printd("thread: %d has created thread: %d\n", current_thread->lwt_id, next_thread->lwt_id);
     
-    __add_to_tail(next_thread, &valid_queue);
+    __add_to_tail_thread(next_thread, &run_queue);
     return next_thread;
 }
 
@@ -207,12 +247,12 @@ lwt_die(void * message)
         current_thread->merge_to->status = LWT_STATUS_RUNNABLE;
         current_thread->merge_to->last_word = message;
         
-        __remove_from_queue(current_thread->merge_to);
-        __add_to_tail(current_thread->merge_to, &valid_queue);
+        __remove_from_thread_queue(current_thread->merge_to);
+        __add_to_tail_thread(current_thread->merge_to, &run_queue);
         
         current_thread->status = LWT_STATUS_ZOMBIES;
-        __remove_from_queue(current_thread);
-        __add_to_tail(current_thread, &recycle_queue);
+        __remove_from_thread_queue(current_thread);
+        __add_to_tail_thread(current_thread, &recycle_queue);
         
         printd("removed dead thread %d to recycle queue\n", current_thread->lwt_id);
     }
@@ -220,8 +260,8 @@ lwt_die(void * message)
     else
     {
         current_thread->status = LWT_STATUS_ZOMBIES;
-        __remove_from_queue(current_thread);
-        __add_to_tail(current_thread, &zombie_queue);
+        __remove_from_thread_queue(current_thread);
+        __add_to_tail_thread(current_thread, &zombie_queue);
         printd("removed dead thread %d to zombie queue\n", current_thread->lwt_id);
     }
     
@@ -256,12 +296,12 @@ lwt_yield(lwt_t yield_to)
     /* yield to NULL */
     if (yield_to)
     {
-        __remove_from_queue(yield_to);
-        __add_to_head(yield_to, &valid_queue);
+        __remove_from_thread_queue(yield_to);
+        __add_to_head_thread(yield_to, &run_queue);
     }
     
-    __remove_from_queue(current_thread);
-    __add_to_tail(current_thread, &valid_queue);
+    __remove_from_thread_queue(current_thread);
+    __add_to_tail_thread(current_thread, &run_queue);
     __lwt_schedule();
     
     return 0;
@@ -281,8 +321,8 @@ lwt_join(lwt_t thread_to_wait)
     if(thread_to_wait->status == LWT_STATUS_ZOMBIES)
     {
         printd("current thread is collecting a zombie thread\n");
-        __remove_from_queue(thread_to_wait);
-        __add_to_tail(thread_to_wait, &recycle_queue);
+        __remove_from_thread_queue(thread_to_wait);
+        __add_to_tail_thread(thread_to_wait, &recycle_queue);
         return thread_to_wait->last_word;
     }
     /* update both thread */
@@ -293,8 +333,8 @@ lwt_join(lwt_t thread_to_wait)
     current_thread->status = LWT_STATUS_BLOCKED;
     
     /* Move to blocked queue */
-    __remove_from_queue(current_thread);
-    __add_to_tail(current_thread, &block_queue);
+    __remove_from_thread_queue(current_thread);
+    __add_to_tail_thread(current_thread, &block_queue);
     
     __lwt_schedule();
     
@@ -316,62 +356,8 @@ lwt_id(lwt_t input_thread)
     return current_thread->lwt_id;
 }
 
-/* return the informatin of current thread status */
-int
-lwt_info(enum lwt_info_t t)
-{
-    int cnt = 0;
-    struct list * current;
-    struct list * head;
-    
-    switch (t) {
-        case LWT_INFO_NTHD_ZOMBIES:
-            current = zombie_queue.next;
-            head = &zombie_queue;
-            break;
-            
-        case LWT_INFO_NTHD_BLOCKED:
-            current = block_queue.next;
-            head = &block_queue;
-            break;
-            
-        default:
-            current = valid_queue.next;
-            head = &valid_queue;
-            break;
-    }
-    
-    while (current != head)
-    {
-        cnt ++;
-        current = current->next;
-    }
-    return cnt;
-}
-
 /* Below functions are related to thread communication */
 
-/* add a thread to tail of a thread queue */
-static inline void
-__add_to_tail_chan (lwt_t thread, struct list * sender_queue)
-{
-    list_insert(sender_queue, &thread->sender_queue);
-}
-
-/* add a thread to head of a thread queue */
-static inline void
-__add_to_head_chan (lwt_t thread, struct list * sender_queue)
-{
-    list_insert(sender_queue->next, &thread->sender_queue);
-}
-
-/* remove a thread from a queue */
-static inline void
-__remove_from_queue_chan(lwt_t thread)
-{
-    (thread->sender_queue.prev)->next = thread->sender_queue.next;
-    (thread->sender_queue.next)->prev = thread->sender_queue.prev;
-}
 
 /* create a thread with initial channel */
 lwt_t lwt_create_chan(lwt_chan_fn_t fn, lwt_chan_t chan)
@@ -405,6 +391,8 @@ void lwt_chan_deref (lwt_chan_t chan)
     printd("thread %d has de-ref channel %d, sender left: %d.\n", current_thread->lwt_id, chan->chan_id, chan->sender_count);
     if (chan->sender_count == 0 && chan->receiver == NULL) {
         printd("channel %d has been freed from memory.\n", chan->chan_id);
+        //__remove_from_chan_queue(chan);
+        //__add_to_tail_chan_queue (chan, &chan_dead);
         free(chan);
     }
 }
@@ -419,16 +407,16 @@ int lwt_snd(lwt_chan_t chan, void * data)
     current_thread->message_data = data;
     printf("current_thread: %d, channel: %d\n", current_thread->lwt_id, chan->chan_id);
     __add_to_tail_chan(current_thread, &(chan->sender_queue));
-    __remove_from_queue(current_thread);
-    __add_to_tail(current_thread, &block_queue);
+    __remove_from_thread_queue(current_thread);
+    __add_to_tail_thread(current_thread, &block_queue);
     current_thread->status = LWT_STATUS_BLOCKED;
     current_thread->block_for = BLOCKED_SENDING;
     printd("thread %d is waiting for channel %d's receiver thread %d.\n", current_thread->lwt_id, chan->chan_id, chan->receiver->lwt_id);
     if (chan->receiver->status == LWT_STATUS_BLOCKED && chan->receiver->block_for == BLOCKED_RECEIVING)
     {
         chan->receiver->status = LWT_STATUS_RUNNABLE;
-        __remove_from_queue_chan(chan->receiver);
-        __add_to_head_chan(chan->receiver, &valid_queue);
+        __remove_from_thread_queue(chan->receiver);
+        __add_to_head_thread(chan->receiver, &run_queue);
     printd("thread %d wake up and ready to receive data from channel %d.\n", chan->receiver->lwt_id, chan->chan_id);
     }
     __lwt_schedule();
@@ -448,16 +436,16 @@ void *lwt_rcv(lwt_chan_t chan)
         printd("thread %d is receiving channel %d, no sender yet.\n", current_thread->lwt_id, chan->chan_id);
         current_thread->status = LWT_STATUS_BLOCKED;
         current_thread->block_for = BLOCKED_RECEIVING;
-        __remove_from_queue(current_thread);
-        __add_to_tail(current_thread, &block_queue);
+        __remove_from_thread_queue(current_thread);
+        __add_to_tail_thread(current_thread, &block_queue);
         __lwt_schedule();
     }
     printd("thread %d resumed to receive data from channel %d.\n", current_thread->lwt_id, chan->chan_id);
     lwt_t sender = (lwt_t)( (int) (chan->sender_queue.next)-offset_sender);
     sender->status = LWT_STATUS_RUNNABLE;
     result = sender->message_data;
-    __remove_from_queue(sender);
-    __add_to_head(sender, &valid_queue);
+    __remove_from_thread_queue(sender);
+    __add_to_head_thread(sender, &run_queue);
     __remove_from_queue_chan(sender);
     return result;
 }
@@ -474,7 +462,104 @@ lwt_chan_t lwt_rcv_chan(lwt_chan_t chan)
     return (lwt_chan_t)lwt_rcv(chan);
 }
 
-/* below are functions regarding global channel management and recycling */
 
+/* debugging functions */
+
+/* return the informatin of current thread status */
+int
+lwt_info(enum lwt_info_t t)
+{
+    int cnt = 0;
+    struct list * current;
+    struct list * head;
+    
+    switch (t) {
+        case LWT_INFO_NTHD_ZOMBIES:
+            current = zombie_queue.next;
+            head = &zombie_queue;
+            break;
+            
+        case LWT_INFO_NTHD_BLOCKED:
+            current = block_queue.next;
+            head = &block_queue;
+            break;
+            
+        default:
+            current = run_queue.next;
+            head = &run_queue;
+            break;
+    }
+    
+    while (current != head)
+    {
+        cnt ++;
+        current = current->next;
+    }
+    return cnt;
+}
+
+void __print_a_thread_queue(struct list * list_to_print)
+{
+    struct list * curr = list_to_print->next;
+    while (curr!=list_to_print)
+    {
+        printf("thread %d.\n",((lwt_t)((int)curr-offset_thread))->lwt_id);
+        curr=curr->next;
+    }
+}
+
+void __print_a_chan_queue(struct list * list_to_print)
+{
+    struct list * curr = list_to_print->next;
+    while (curr!=list_to_print)
+    {
+        printf("thread %d.\n",((lwt_chan_t)((int)curr-offset_chan))->chan_id);
+        curr=curr->next;
+    }
+}
+
+void print_queue_content(enum lwt_info_t input)
+{
+    switch (input)
+    {
+
+        case LWT_INFO_NTHD_RUNNABLE:
+            printf("runnable queue showed as below: \n");
+            __print_a_thread_queue(&run_queue);
+            break;
+        case LWT_INFO_NTHD_BLOCKED:
+            printf("blocked queue showed as below: \n");
+            __print_a_thread_queue(&block_queue);
+            break;
+        case LWT_INFO_NTHD_ZOMBIES:
+            printf("zombie queue showed as below: \n");
+            __print_a_thread_queue(&zombie_queue);
+            break;
+        case LWT_INFO_NTHD_RECYCLE:
+            printf("recycle queue showed as below: \n");
+            __print_a_thread_queue(&recycle_queue);
+            break;
+        case LWT_INFO_NCHAN:
+            printf("working channel showed as below: \n");
+            __print_a_chan_queue(&chan_working);
+            break;
+        case LWT_INFO_DCHAN:
+            printf("dead channel showed as below: \n");
+            __print_a_chan_queue(&chan_dead);
+            break;
+        case LWT_INFO_NSNDING:
+            printf("threads blocked for sending showed as below: \n");
+            //__print_a_chan_queue(&chan_dead);
+            break;
+        case LWT_INFO_NRCVING:
+            printf("threads blocked for receiving showed as below: \n");
+            //__print_a_chan_queue(&chan_dead);
+            break;
+
+        default:
+            printf("cannot identify printing instructions\n");
+            break;
+    }
+}
 
 
