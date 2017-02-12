@@ -20,6 +20,7 @@ void print_all_info()
     printf("number working channel: %d.\n",lwt_info(LWT_INFO_NCHAN));
     printf("number dead channel: %d.\n",lwt_info(LWT_INFO_DCHAN));
 }
+
 lwt_t t1;
 lwt_t t2;
 lwt_t t3;

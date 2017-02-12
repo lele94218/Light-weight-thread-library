@@ -1,9 +1,8 @@
 #ifndef LWT_H
 #define LWT_H
 
-#define DEBUG
-/* turn this on will enable error check for user input */
 
+/* turn this on will enable error check for user input */
 #ifdef DEBUG
 #define printd(format, ...) printf("Line: %05d: "format, __LINE__, ##__VA_ARGS__)
 #else
@@ -24,10 +23,7 @@ typedef unsigned char uchar;
 typedef int t_id;
 typedef int t_stat;
 
-
-
-
-/* User info argument type.  */
+/* User level info argument type.  */
 enum lwt_info_t
 {
     /* The thread is running. */
@@ -50,6 +46,7 @@ enum lwt_info_t
     LWT_INFO_DCHAN,  
 };
 
+/* thread status */
 enum lwt_status
 {
     /* The thread is running. */
@@ -60,6 +57,7 @@ enum lwt_status
     LWT_STATUS_ZOMBIES
 };
 
+/* if status is blocked, this shows reason for blockage */
 enum block_reason
 {
     /* The thread is running. */
@@ -76,9 +74,7 @@ struct _lwt_context
     unsigned int ip, sp;
 };
 
-//typedef struct _lwt_context lwt_context;
-
-
+/* linked list structure, for all linked list in this lib */
 struct list {
     struct list * next, * prev;
 };
@@ -102,7 +98,7 @@ struct _lwt_t
     /* the reason for blockage */
     enum block_reason block_for;
 
-    /* thread regarding join */
+    /* thread regarding join, the master who is waiting to collect this thread */
     struct _lwt_t * merge_to;
 
     /* data sending to other thread */
@@ -125,13 +121,13 @@ struct lwt_channel
     /* channel ID */
     int chan_id;
 
-    /* Linked list head */
+    /* head of linked list, serve as a reference to its sender queue */
     struct list sender_queue;
 
-    /* Linked list node */
+    /* Linked list node, used to find its position in global channel queue */
     struct list chan_queue;
 
-    /* number of senders of this channel */
+    /* number of senders have access to this channel */
     int sender_count;
 
     /* receiver thread */
@@ -150,7 +146,6 @@ void lwt_die(void *);
 int lwt_yield(lwt_t  strong_thread);
 lwt_t lwt_current();
 int lwt_id(lwt_t  input_thread);
-int lwt_info(enum lwt_info_t t);
 lwt_t lwt_current();
 
 /* Function declaration for lwt thread channel operation */
@@ -164,4 +159,5 @@ lwt_t lwt_create_chan(lwt_chan_fn_t fn, lwt_chan_t c);
 
 /* debugging function */
 void print_queue_content(enum lwt_info_t);
+int lwt_info(enum lwt_info_t t);
 #endif
