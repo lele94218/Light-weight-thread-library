@@ -458,14 +458,16 @@ void *lwt_rcv(lwt_chan_t chan)
     return result;
 }
 
-int lwt_snd_chan(lwt_chan_t c, lwt_chan_t sending)
+int lwt_snd_chan(lwt_chan_t through, lwt_chan_t sending)
 {
-    return 0;
+    int return_value = lwt_snd(through, (void *) sending);
+    sending->sender_count = return_value? sending->sender_count:sending->sender_count+1;
+    return return_value;
 }
 
-lwt_chan_t lwt_rcv_chan(lwt_chan_t c)
+lwt_chan_t lwt_rcv_chan(lwt_chan_t chan)
 {
-    return NULL;
+    return (lwt_chan_t)lwt_rcv(chan);
 }
 
 
