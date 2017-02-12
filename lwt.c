@@ -379,7 +379,7 @@ lwt_t lwt_create_chan(lwt_chan_fn_t fn, lwt_chan_t chan)
     lwt_t created_thread = lwt_create((void *)fn, (void *)chan);
     chan -> receiver = created_thread;
     chan-> sender_count+=1;
-    printf("thread %d has created thread %d with channel %d.\n", current_thread->lwt_id, created_thread->lwt_id,chan->chan_id);
+    printd("thread %d has created thread %d with channel %d.\n", current_thread->lwt_id, created_thread->lwt_id,chan->chan_id);
     return created_thread;
 }
 /* create a channel in the current thread */
@@ -390,7 +390,7 @@ lwt_chan_t lwt_chan(int size)
     chan->sender_count = 0;
     chan->chan_id = chan_counter++;
     list_init(&(chan->sender_queue));
-    printf("thread %d has created channel %d.\n", current_thread->lwt_id, chan->chan_id);
+    printd("thread %d has created channel %d.\n", current_thread->lwt_id, chan->chan_id);
     return chan;
 }
 
@@ -399,10 +399,10 @@ void lwt_chan_deref (lwt_chan_t chan)
     if (chan->receiver == current_thread)
     {
         chan->receiver = NULL;
-        printf("thread %d is nolonger receiver of channel %d.\n", current_thread->lwt_id, chan->chan_id);
+        printd("thread %d is nolonger receiver of channel %d.\n", current_thread->lwt_id, chan->chan_id);
     }
     else chan->sender_count--;
-    printf("thread %d has de-ref channel %d, sender left: %d.\n", current_thread->lwt_id, chan->chan_id, chan->sender_count);
+    printd("thread %d has de-ref channel %d, sender left: %d.\n", current_thread->lwt_id, chan->chan_id, chan->sender_count);
     if (chan->sender_count == 0 && chan->receiver == NULL) {
         free(chan);
     }
@@ -412,7 +412,7 @@ int lwt_snd(lwt_chan_t chan, void * data)
 {
     if (chan->receiver == NULL)
     {
-        printf("thread %d has send data to channel %d, but no receiver.\n", current_thread->lwt_id, chan->chan_id);
+        printd("thread %d has send data to channel %d, but no receiver.\n", current_thread->lwt_id, chan->chan_id);
         return -1;
     }
     current_thread->message_data = data;
@@ -422,13 +422,13 @@ int lwt_snd(lwt_chan_t chan, void * data)
     __add_to_tail(current_thread, &block_queue);
     current_thread->status = LWT_STATUS_BLOCKED;
     current_thread->block_for = BLOCKED_SENDING;
-    printf("thread %d is waiting for channel %d's receiver thread %d.\n", current_thread->lwt_id, chan->chan_id, chan->receiver->lwt_id);
+    printd("thread %d is waiting for channel %d's receiver thread %d.\n", current_thread->lwt_id, chan->chan_id, chan->receiver->lwt_id);
     if (chan->receiver->status == LWT_STATUS_BLOCKED && chan->receiver->block_for == BLOCKED_RECEIVING)
     {
         chan->receiver->status = LWT_STATUS_RUNNABLE;
         __remove_from_queue_chan(chan->receiver);
         __add_to_head_chan(chan->receiver, &valid_queue);
-    printf("thread %d wake up and ready to receive data from channel %d.\n", chan->receiver->lwt_id, chan->chan_id);
+    printd("thread %d wake up and ready to receive data from channel %d.\n", chan->receiver->lwt_id, chan->chan_id);
     }
     __lwt_schedule();
     return 0;
@@ -438,20 +438,20 @@ void *lwt_rcv(lwt_chan_t chan)
 {
     if (chan->sender_count == 0)
     {
-        printf("thread %d is receiving from channel %d with no sender.\n", current_thread->lwt_id, chan->chan_id);
+        printd("thread %d is receiving from channel %d with no sender.\n", current_thread->lwt_id, chan->chan_id);
         return NULL;
     }
     void * result;
     if (chan->sender_queue.next == &(chan->sender_queue))
     {
-        printf("thread %d is receiving channel %d, no sender yet.\n", current_thread->lwt_id, chan->chan_id);
+        printd("thread %d is receiving channel %d, no sender yet.\n", current_thread->lwt_id, chan->chan_id);
         current_thread->status = LWT_STATUS_BLOCKED;
         current_thread->block_for = BLOCKED_RECEIVING;
         __remove_from_queue(current_thread);
         __add_to_tail(current_thread, &block_queue);
         __lwt_schedule();
     }
-    printf("thread %d resumed to receive data from channel %d.\n", current_thread->lwt_id, chan->chan_id);
+    printd("thread %d resumed to receive data from channel %d.\n", current_thread->lwt_id, chan->chan_id);
     lwt_t sender = (lwt_t)( (int) (chan->sender_queue.next)-offset_sender);
     sender->status = LWT_STATUS_RUNNABLE;
     result = sender->message_data;
