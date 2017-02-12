@@ -441,12 +441,14 @@ void *lwt_rcv(lwt_chan_t chan)
     void * result;
     if (chan->sender_queue.next == &(chan->sender_queue))
     {
+        printf("thread %d is receiving channel %d, no sender yet.\n", current_thread->lwt_id, chan->chan_id);
         current_thread->status = LWT_STATUS_BLOCKED;
         current_thread->block_for = BLOCKED_RECEIVING;
         __remove_from_queue(current_thread);
         __add_to_tail(current_thread, &block_queue);
         __lwt_schedule();
     }
+    printf("thread %d resumed to receive data from channel %d.\n", current_thread->lwt_id, chan->chan_id);
     lwt_t sender = (lwt_t)( (int) (chan->sender_queue.next)-offset_sender);
     sender->status = LWT_STATUS_RUNNABLE;
     result = sender->message_data;
