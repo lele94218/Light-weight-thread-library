@@ -29,9 +29,6 @@ lwt_t old_thread;
 
 
 /* --------------- internal function declarations --------------- */
-
-
-inline void __lwt_dispatch(struct _lwt_context *curr, struct _lwt_context *next);
 void __lwt_schedule (void);
 void * __lwt_trampoline(lwt_fn_t fn, void * data);
 void __initiate(void);
@@ -94,7 +91,7 @@ __init_thread(lwt_t created_thread)
 /* --------------- Function implementations --------------- */
 
 /* pause one thread, start executing the next one */
-inline void
+static inline void
 __lwt_dispatch(struct _lwt_context * curr, struct _lwt_context * next)
 {
     __asm__ __volatile__
@@ -435,17 +432,7 @@ void *lwt_rcv(lwt_chan_t chan)
 {
     if (chan->sender_count == 0) return NULL;
     void * result;
-    if (chan->sender_queue.next!=&(chan->sender_queue))
-    {
-        lwt_t sender = ((lwt_t)((int)(chan->sender_queue.next)-offset_sender));
-        sender->status = LWT_STATUS_RUNNABLE;
-        result = sender->message_data;
-        __remove_from_queue(sender);
-        __add_to_head(sender, &valid_queue);
-        __remove_from_queue_chan(sender);
-        return result;
-    }
-    else
+    if (chan->sender_queue.next == &(chan->sender_queue)
     {
         current_thread->status = LWT_STATUS_BLOCKED;
         current_thread->block_for = BLOCKED_RECEIVING;
@@ -453,7 +440,13 @@ void *lwt_rcv(lwt_chan_t chan)
         __add_to_tail(current_thread, &block_queue);
         __lwt_schedule();
     }
-    return  NULL;
+    lwt_t sender = ((lwt_t)((int)(chan->sender_queue.next)-offset_sender));
+    sender->status = LWT_STATUS_RUNNABLE;
+    result = sender->message_data;
+    __remove_from_queue(sender);
+    __add_to_head(sender, &valid_queue);
+    __remove_from_queue_chan(sender);
+    return result;
 }
 
 int lwt_snd_chan(lwt_chan_t c, lwt_chan_t sending)
