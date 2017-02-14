@@ -230,13 +230,9 @@ lwt_yield(lwt_t yield_to)
     /* yield to NULL */
     if (yield_to)
     {
-        // __remove_from_thread_queue(yield_to);
-        // __add_to_head_thread(yield_to, &run_queue);
         list_rem(yield_to, linked_list_node);
         list_head_append(&run_queue, yield_to, linked_list_node);
     }
-    // __remove_from_thread_queue(current_thread);
-    // __add_to_tail_thread(current_thread, &run_queue);
     list_rem(current_thread, linked_list_node);
     list_head_add(&run_queue, current_thread, linked_list_node);
 
@@ -258,8 +254,6 @@ lwt_join(lwt_t thread_to_wait)
     if(thread_to_wait->status == LWT_STATUS_ZOMBIES)
     {
         printd("current thread is collecting a zombie thread\n");
-        // __remove_from_thread_queue(thread_to_wait);
-        // __add_to_tail_thread(thread_to_wa_nodeit, &recycle_queue);
         list_rem(thread_to_wait, linked_list_node);
         list_head_add(&recycle_queue, thread_to_wait, linked_list_node);
 
@@ -274,8 +268,6 @@ lwt_join(lwt_t thread_to_wait)
     current_thread->block_for = BLOCKED_JOIN;
 
     /* Move to blocked queue */
-    // __remove_from_thread_queue(current_thread);
-    // __add_to_tail_thread(current_thread, &block_queue);
     list_rem(current_thread, linked_list_node);
     list_head_add(&block_queue, current_thread, linked_list_node);
 
@@ -308,7 +300,6 @@ lwt_t
 lwt_create_chan(lwt_chan_fn_t fn, lwt_chan_t chan)
 {
     lwt_t created_thread = lwt_create((void *)fn, (void *)chan);
-    //chan->receiver = created_thread;
     chan->sender_count += 1;
     printd("thread %d has created thread %d with channel %d.\n", current_thread->lwt_id, created_thread->lwt_id,chan->chan_id);
     return created_thread;
