@@ -51,6 +51,18 @@ __init_thread(lwt_t created_thread)
     created_thread->last_word = NULL;
 }
 
+
+/* initiate a channel */
+static void inline
+__init_chan(lwt_chan_t chan)
+{
+    chan->receiver = current_thread;
+    chan->sender_count = 0;
+    chan->chan_id = chan_counter++;
+    list_head_init(&(chan->sender_queue));
+    list_head_append(&chan_working, chan, chan_queue_node);
+}
+
 /* --------------- Major thread-function implementations --------------- */
 
 /* pause one thread, start executing the next one */
@@ -290,16 +302,6 @@ lwt_id(lwt_t input_thread)
 
 /* --------------- Thread communication function implementation, channelling --------------- */
 
-/* initiate a channel */
-void
-__init_chan(lwt_chan_t chan)
-{
-    chan->receiver = current_thread;
-    chan->sender_count = 0;
-    chan->chan_id = chan_counter++;
-    list_head_init(&(chan->sender_queue));
-    list_head_append(&chan_working, chan, chan_queue_node);
-}
 
 /* create a thread with initial channel, receiver become created thread, creator thread become sender */
 lwt_t
