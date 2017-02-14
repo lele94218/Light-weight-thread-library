@@ -1,10 +1,10 @@
 #ifndef LWT_H
 #define LWT_H
-
+#include "lwt_list.h"
 
 /* turn this on will enable error check for user input */
 #ifdef DEBUG
-#define printd(format, ...) printf("Line: %05d: "format, __LINE__, ##__VA_ARGS__)
+#define printd(format, ...) printf("Line: %05d: "format, __LINE__, ## __VA_ARGS__)
 #else
 #define printd(format, ...)
 #endif
@@ -31,11 +31,11 @@ enum lwt_info_t
     /* The thread is blocked. */
     LWT_INFO_NTHD_BLOCKED,
     /* This is a zombie thread. */
-    LWT_INFO_NTHD_ZOMBIES, 
+    LWT_INFO_NTHD_ZOMBIES,
     /* number of threads waiting to be re-used, not freed yet */
-    LWT_INFO_NTHD_RECYCLE, 
+    LWT_INFO_NTHD_RECYCLE,
     /* number of threads blocked sedning */
-    LWT_INFO_NSNDING, 
+    LWT_INFO_NSNDING,
     /* number of threads blocked receiving */
     LWT_INFO_NRCVING,
     /* number of threads blocked receiving */
@@ -43,7 +43,7 @@ enum lwt_info_t
     /* number of active channels */
     LWT_INFO_NCHAN,
     /* number of dead channels, not freed yet */
-    LWT_INFO_DCHAN,  
+    LWT_INFO_DCHAN,
 };
 
 /* thread status */
@@ -74,20 +74,14 @@ struct _lwt_context
     unsigned int ip, sp;
 };
 
-/* linked list structure, for all linked list in this lib */
-struct list {
-    struct list * next, * prev;
-};
-
-
 /* This structure describes a LWT thread. */
 struct _lwt_t
 {
     /* Linked list node in a global thread queue, this struct position is fixed */
-    struct list linked_list;
+    struct list linked_list_node;
 
     /* Sender list node, its position at a sender queue */
-    struct list sender_queue;
+    struct list sender_queue_node;
 
     /* Thread id */
     t_id lwt_id;
@@ -102,30 +96,30 @@ struct _lwt_t
     struct _lwt_t * merge_to;
 
     /* data sending to other thread */
-	void * message_data;
-    
+    void * message_data;
+
     /* initial stack memory pointer, lowest address */
     unsigned int init_sp;
-    
+
     /* return value */
     void * last_word;
-    
+
     /* Thread context */
     struct _lwt_context context;
 };
 typedef struct _lwt_t * lwt_t;
 
 /* This structure describes a lwt channel */
-struct lwt_channel
+struct _lwt_channel
 {
     /* channel ID */
     int chan_id;
 
     /* head of linked list, serve as a reference to its sender queue */
-    struct list sender_queue;
+    struct list_head sender_queue;
 
     /* Linked list node, used to find its position in global channel queue */
-    struct list chan_queue;
+    struct list chan_queue_node;
 
     /* number of senders have access to this channel */
     int sender_count;
@@ -133,7 +127,7 @@ struct lwt_channel
     /* receiver thread */
     struct _lwt_t * receiver;
 };
-typedef struct lwt_channel * lwt_chan_t;
+typedef struct _lwt_channel * lwt_chan_t;
 
 /* define a function pointer */
 typedef void * (*lwt_fn_t)(void *);
@@ -141,11 +135,11 @@ typedef void * (*lwt_chan_fn_t)(lwt_chan_t);
 
 /* Funciton declaration for lwt thread operation */
 lwt_t  lwt_create(lwt_fn_t fn, void * data);
-void * lwt_join(lwt_t  thread_to_wait);
+void * lwt_join(lwt_t thread_to_wait);
 void lwt_die(void *);
-int lwt_yield(lwt_t  strong_thread);
+int lwt_yield(lwt_t strong_thread);
 lwt_t lwt_current();
-int lwt_id(lwt_t  input_thread);
+int lwt_id(lwt_t input_thread);
 lwt_t lwt_current();
 
 /* Function declaration for lwt thread channel operation */

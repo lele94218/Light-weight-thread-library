@@ -3,40 +3,59 @@
 
 /* linked list structure, for all linked list in this lib */
 struct list {
-    struct list * next, * prev;
+    struct list * n, * p;
 };
 
 struct list_head {
     struct list l;
-}
-
+};
 #define LIST_DEF_NAME list
 
 /* below two functions are universal list operation function */
 static inline void
-list_insert(struct list * link, struct list * new_link)
+list_ll_add(struct list * link, struct list * new_link)
 {
-    new_link->prev = link->prev;
-    new_link->next = link;
-    new_link->prev->next = new_link;
-    new_link->next->prev = new_link;
+    new_link->p = link->p;
+    new_link->n = link;
+    new_link->p->n = new_link;
+    new_link->n->p = new_link;
 }
 
-/* Inint list */
+/* Init list */
 static inline void
-list_init(struct list *list)
+list_ll_init(struct list *list)
 {
-    list->next = list;
-    list->prev = list;
+    list->n = list;
+    list->p = list;
+}
+
+/* Init list head */
+static inline void
+list_head_init(struct list_head * lh)
+{
+    list_ll_init(&lh->l);
 }
 
 /* Remove from list */
 static inline void
-list_remove(struct list *list)
+list_ll_rem(struct list *list)
 {
-    list->next->prev = list->prev;
-    list->prev->next = list->next;
-    list->prev = list->next = list;
+    list->n->p = list->p;
+    list->p->n = list->n;
+    list->p = list->n = list;
+}
+
+/* Is list empty */
+static inline int
+list_ll_empty(struct list *list)
+{
+    return list->n == list;
+}
+
+static inline int
+list_head_empty(struct list_head * lh)
+{
+    return list_ll_empty(&lh->l);
 }
 
 #define offsetof(type, field) \
@@ -59,6 +78,16 @@ list_remove(struct list *list)
 #define list_head_add(lh, o, lname)     list_ll_add((&(lh)->l), &(o)->lname)
 #define list_head_append(lh, o, lname)  list_ll_add(((&(lh)->l)->p), &(o)->lname)
 
+/**
+ * Explicit type API: Pass in the types of the nodes in the list, and
+ * the name of the list field in that type.
+ */
+
+#define list_head_first(lh, type, lname) \
+    container(((lh)->l.n), type, lname)
+#define list_head_last(lh, type, lname) \
+    container(((lh)->l.p), type, lname)
+
 /* If your struct named the list field "list" (as defined by LIST_DEF_NAME */
 #define list_is_head_d(lh, o)           list_is_head(lh, o, LIST_DEF_NAME)
 #define list_singleton_d(o)             list_singleton(o, LIST_DEF_NAME)
@@ -73,5 +102,17 @@ list_remove(struct list *list)
 #define list_head_first_d(lh, type)     list_head_first(lh, type, LIST_DEF_NAME)
 #define list_head_add_d(lh, o)          list_head_add(lh, o, LIST_DEF_NAME)
 #define list_head_append_d(lh, o)       list_head_append(lh, o, LIST_DEF_NAME)
+
+/**
+ * Iteration API
+ */
+
+/* Iteration without mutating the list */
+#define ps_list_foreach(head, iter, lname)              \
+    for (iter = ps_list_head_first((head), __typeof__(*iter), lname); \
+         !ps_list_is_head((head), iter, lname);         \
+         (iter) = ps_list_next(iter, lname))
+
+#define ps_list_foreach_d(head, iter) ps_list_foreach(head, iter, PS_LIST_DEF_NAME)
 
 #endif

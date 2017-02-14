@@ -63,7 +63,7 @@ void fun()
 void fun1(lwt_chan_t c)
 {
     printf("this is thread %d \n",lwt_id(lwt_current()));
-    lwt_chan_t  using_channel = lwt_rcv_chan(c);
+    lwt_chan_t using_channel = lwt_rcv_chan(c);
     lwt_snd(using_channel, (void *)lwt_id(lwt_current()));
     printf("thread %d has complete data sent to t1\n", lwt_id(lwt_current()));
     lwt_chan_deref(using_channel);
