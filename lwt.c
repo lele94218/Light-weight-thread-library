@@ -417,7 +417,9 @@ int lwt_snd_chan(lwt_chan_t through, lwt_chan_t sending)
 lwt_chan_t lwt_rcv_chan(lwt_chan_t chan)
 {
     lwt_chan_t rec = lwt_rcv(chan);
-    rec->snd_cnt++;
+    if (rec) {
+        rec->snd_cnt++;
+    }
     return rec;
 }
 
