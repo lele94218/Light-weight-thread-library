@@ -94,6 +94,7 @@ __lwt_schedule ()
     old_thread = current_thread;
     current_thread = list_head_first(&run_queue, struct _lwt_t, linked_list_node);
     printd("thread %d start executing from reschedule\n", current_thread->lwt_id);
+    current_thread->state = LWT_RUNNING;
     __lwt_dispatch(&(old_thread->context), &(current_thread->context));
 }
 
