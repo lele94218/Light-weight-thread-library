@@ -87,7 +87,7 @@ struct _lwt_t
     t_id lwt_id;
 
     /* the status of a thread */
-    enum lwt_status status;
+    enum lwt_status state;
 
     /* the reason for blockage */
     enum block_reason block_for;
@@ -122,7 +122,7 @@ struct _lwt_channel
     struct list chan_queue_node;
 
     /* number of senders have access to this channel */
-    int sender_count;
+    int snd_cnt;
 
     /* receiver thread */
     struct _lwt_t * receiver;

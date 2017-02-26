@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <assert.h>
 
-#include <lwt.h>
+#include "lwt.h"
 
 #define rdtscll(val) __asm__ __volatile__("rdtsc" : "=A" (val))
 
@@ -195,7 +195,7 @@ test_perf_channels(int chsz)
 	int i;
 	unsigned long long start, end;
 
-	assert(LWT_RUNNING == lwt_current()->state);
+//	assert(LWT_RUNNING == lwt_current()->state);
 	from = lwt_chan(chsz);
 	assert(from);
 	t    = lwt_create_chan(fn_chan, from);

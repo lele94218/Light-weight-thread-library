@@ -46,7 +46,7 @@ static inline void
 __init_thread(lwt_t created_thread)
 {
     created_thread->lwt_id = lwt_counter++;
-    created_thread->status = LWT_STATUS_RUNNABLE;
+    created_thread->state = LWT_STATUS_RUNNABLE;
     created_thread->merge_to = NULL;
     created_thread->last_word = NULL;
 }
@@ -57,7 +57,7 @@ static void inline
 __init_chan(lwt_chan_t chan)
 {
     chan->receiver = current_thread;
-    chan->sender_count = 0;
+    chan->snd_cnt = 0;
     chan->chan_id = chan_counter++;
     list_head_init(&(chan->sender_queue));
     list_head_append(&chan_working, chan, chan_queue_node);
@@ -182,13 +182,13 @@ lwt_die(void * message)
     /* if someone is waiting to join this one, return and go to recycle queue */
     if (current_thread->merge_to)
     {
-        current_thread->merge_to->status = LWT_STATUS_RUNNABLE;
+        current_thread->merge_to->state = LWT_STATUS_RUNNABLE;
         current_thread->merge_to->last_word = message;
 
         list_rem(current_thread->merge_to, linked_list_node);
         list_head_add(&run_queue, current_thread->merge_to, linked_list_node);
 
-        current_thread->status = LWT_STATUS_ZOMBIES;
+        current_thread->state = LWT_STATUS_ZOMBIES;
         list_rem(current_thread, linked_list_node);
         list_head_add(&recycle_queue, current_thread, linked_list_node);
 
@@ -197,7 +197,7 @@ lwt_die(void * message)
     /* nobody is currently waiting to join this one, becomes a zombie */
     else
     {
-        current_thread->status = LWT_STATUS_ZOMBIES;
+        current_thread->state = LWT_STATUS_ZOMBIES;
         list_rem(current_thread, linked_list_node);
         list_head_add(&zombie_queue, current_thread, linked_list_node);
 
@@ -222,7 +222,7 @@ int
 lwt_yield(lwt_t yield_to)
 {
     /* yield to itself */
-    if (yield_to == current_thread || (yield_to && yield_to->status != LWT_STATUS_RUNNABLE))
+    if (yield_to == current_thread || (yield_to && yield_to->state != LWT_STATUS_RUNNABLE))
     {
         printd("thread %d is yielding to itself or it is not runable\n",current_thread->lwt_id);
         return 0;
@@ -251,7 +251,7 @@ lwt_join(lwt_t thread_to_wait)
         printd("error: thread to wait is NULL or itself or nobody waits it\n");
         return NULL;
     }
-    if(thread_to_wait->status == LWT_STATUS_ZOMBIES)
+    if(thread_to_wait->state == LWT_STATUS_ZOMBIES)
     {
         printd("current thread is collecting a zombie thread\n");
         list_rem(thread_to_wait, linked_list_node);
@@ -264,7 +264,7 @@ lwt_join(lwt_t thread_to_wait)
 
     printd("thread %d blocked, waiting for thread %d to join\n", current_thread->lwt_id, thread_to_wait->lwt_id);
 
-    current_thread->status = LWT_STATUS_BLOCKED;
+    current_thread->state = LWT_STATUS_BLOCKED;
     current_thread->block_for = BLOCKED_JOIN;
 
     /* Move to blocked queue */
@@ -300,7 +300,7 @@ lwt_t
 lwt_create_chan(lwt_chan_fn_t fn, lwt_chan_t chan)
 {
     lwt_t created_thread = lwt_create((void *)fn, (void *)chan);
-    chan->sender_count += 1;
+    chan->snd_cnt += 1;
     printd("thread %d has created thread %d with channel %d.\n", current_thread->lwt_id, created_thread->lwt_id,chan->chan_id);
     return created_thread;
 }
@@ -334,9 +334,9 @@ lwt_chan_deref (lwt_chan_t chan)
         chan->receiver = NULL;
         printd("thread %d is nolonger receiver of channel %d.\n", current_thread->lwt_id, chan->chan_id);
     }
-    else chan->sender_count--;
-    printd("thread %d has de-ref channel %d, sender left: %d.\n", current_thread->lwt_id, chan->chan_id, chan->sender_count);
-    if (chan->sender_count == 0 && chan->receiver == NULL) {
+    else chan->snd_cnt--;
+    printd("thread %d has de-ref channel %d, sender left: %d.\n", current_thread->lwt_id, chan->chan_id, chan->snd_cnt);
+    if (chan->snd_cnt == 0 && chan->receiver == NULL) {
         printd("channel %d has been freed from memory.\n", chan->chan_id);
         list_rem(chan, chan_queue_node);
         list_head_add(&chan_dead, chan, chan_queue_node);
@@ -358,12 +358,12 @@ lwt_snd(lwt_chan_t chan, void * data)
     list_rem(current_thread, linked_list_node);
     list_head_add(&block_queue, current_thread, linked_list_node);
 
-    current_thread->status = LWT_STATUS_BLOCKED;
+    current_thread->state = LWT_STATUS_BLOCKED;
     current_thread->block_for = BLOCKED_SENDING;
     printd("thread %d is waiting for channel %d's receiver thread %d.\n", current_thread->lwt_id, chan->chan_id, chan->receiver->lwt_id);
-    if (chan->receiver->status == LWT_STATUS_BLOCKED && chan->receiver->block_for == BLOCKED_RECEIVING)
+    if (chan->receiver->state == LWT_STATUS_BLOCKED && chan->receiver->block_for == BLOCKED_RECEIVING)
     {
-        chan->receiver->status = LWT_STATUS_RUNNABLE;
+        chan->receiver->state = LWT_STATUS_RUNNABLE;
         list_rem(chan->receiver, linked_list_node);
         list_head_append(&run_queue, chan->receiver, linked_list_node);
         printd("thread %d wake up and ready to receive data from channel %d.\n", chan->receiver->lwt_id, chan->chan_id);
@@ -376,7 +376,7 @@ lwt_snd(lwt_chan_t chan, void * data)
 void *
 lwt_rcv(lwt_chan_t chan)
 {
-    if (chan->sender_count == 0)
+    if (chan->snd_cnt == 0)
     {
         printd("thread %d is receiving from channel %d with no sender.\n", current_thread->lwt_id, chan->chan_id);
         return NULL;
@@ -386,7 +386,7 @@ lwt_rcv(lwt_chan_t chan)
     if (list_head_empty(&(chan->sender_queue)))
     {
         printd("thread %d is receiving channel %d, no sender yet.\n", current_thread->lwt_id, chan->chan_id);
-        current_thread->status = LWT_STATUS_BLOCKED;
+        current_thread->state = LWT_STATUS_BLOCKED;
         current_thread->block_for = BLOCKED_RECEIVING;
         list_rem(current_thread, linked_list_node);
         list_head_add(&block_queue, current_thread, linked_list_node);
@@ -395,7 +395,7 @@ lwt_rcv(lwt_chan_t chan)
     printd("thread %d resumed to receive data from channel %d.\n", current_thread->lwt_id, chan->chan_id);
 
     lwt_t sender = list_head_first(&(chan->sender_queue), struct _lwt_t, sender_queue_node);
-    sender->status = LWT_STATUS_RUNNABLE;
+    sender->state = LWT_STATUS_RUNNABLE;
     result = sender->message_data;
 
     list_rem(sender, linked_list_node);
@@ -408,14 +408,16 @@ lwt_rcv(lwt_chan_t chan)
 int lwt_snd_chan(lwt_chan_t through, lwt_chan_t sending)
 {
     int return_value = lwt_snd(through, (void *) sending);
-    sending->sender_count = return_value ? sending->sender_count : sending->sender_count + 1;
+//    sending->snd_cnt = return_value ? sending->snd_cnt : sending->snd_cnt + 1;
     return return_value;
 }
 
 /* receive a channel from a channel, the receiver can access the sending channel, so it becomes a sender of it */
 lwt_chan_t lwt_rcv_chan(lwt_chan_t chan)
 {
-    return (lwt_chan_t)lwt_rcv(chan);
+    lwt_chan_t rec = lwt_rcv(chan);
+    rec->snd_cnt++;
+    return rec;
 }
 
 /* --------------- internal function for user level debugging --------------- */
