@@ -55,6 +55,7 @@ enum lwt_status
     LWT_STATUS_BLOCKED,
     /* This is a zombie thread. */
     LWT_STATUS_ZOMBIES,
+    /* This thread is currently running. */
     LWT_RUNNING
 };
 
