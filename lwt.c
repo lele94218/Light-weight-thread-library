@@ -3,6 +3,7 @@
 
 #include "lwt.h"
 #include "lwt_list.h"
+//#include "lwt_dispatch.h"
 
 /* --------------- initialization function --------------- */
 void __initiate (void) __attribute__((constructor));
@@ -71,19 +72,25 @@ __lwt_dispatch(struct _lwt_context * curr, struct _lwt_context * next)
 {
     __asm__ __volatile__
     (
-        "push %%ebx;"
-        "push %%edi;"
-        "push %%esi;"
+//        "push %%ebx;"
+//        "push %%edi;"
+//        "push %%esi;"
+//        "push %%ebp;"
+//        "push %%eax;"
         "movl %%esp,%0;"
         "movl $retDispatch%=,%1;"
         "movl %2,%%esp;"
         "jmp *%3;"
         "retDispatch%=:;"
-        "pop %%esi;"
-        "pop %%edi;"
-        "pop %%ebx;"
+//        "pop %%eax;"
+//        "pop %%ebp;"
+//        "pop %%esi;"
+//        "pop %%edi;"
+//        "pop %%ebx;"
         : "=m" (curr->sp),"=m" (curr->ip)
         : "m" (next->sp),"m" (next->ip)
+        : "ebx", "edi", "esi", "ebp", "eax"
+     
     );
 }
 
