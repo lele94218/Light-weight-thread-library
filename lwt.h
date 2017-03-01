@@ -79,11 +79,12 @@ struct _lwt_context
 /* This structure describes a LWT thread. */
 struct _lwt_t
 {
-    /* Linked list node in a global thread queue, this struct position is fixed */
-    struct list linked_list_node;
-
-    /* Sender list node, its position at a sender queue */
-    struct list sender_queue_node;
+//    /* Linked list node in a global thread queue, this struct position is fixed */
+//    struct list linked_list_node;
+//
+//    /* Sender list node, its position at a sender queue */
+//    struct list sender_queue_node;
+    struct list list_node;
 
     /* Thread id */
     t_id lwt_id;
@@ -121,7 +122,7 @@ struct _lwt_channel
     struct list_head sender_queue;
 
     /* Linked list node, used to find its position in global channel queue */
-    struct list chan_queue_node;
+    struct list list_node;
 
     /* number of senders have access to this channel */
     int snd_cnt;

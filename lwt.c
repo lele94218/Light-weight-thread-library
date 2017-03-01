@@ -61,7 +61,7 @@ __init_chan(lwt_chan_t chan)
     chan->snd_cnt = 0;
     chan->chan_id = chan_counter++;
     list_head_init(&(chan->sender_queue));
-    list_head_append(&chan_working, chan, chan_queue_node);
+    list_head_append_d(&chan_working, chan);
 }
 
 /* --------------- Major thread-function implementations --------------- */
@@ -77,11 +77,13 @@ __lwt_dispatch(struct _lwt_context * curr, struct _lwt_context * next)
 //        "push %%esi;"
 //        "push %%ebp;"
 //        "push %%eax;"
+        "pushal;"
         "movl %%esp,%0;"
         "movl $retDispatch%=,%1;"
         "movl %2,%%esp;"
         "jmp *%3;"
         "retDispatch%=:;"
+        "popal;"
 //        "pop %%eax;"
 //        "pop %%ebp;"
 //        "pop %%esi;"
@@ -89,7 +91,8 @@ __lwt_dispatch(struct _lwt_context * curr, struct _lwt_context * next)
 //        "pop %%ebx;"
         : "=m" (curr->sp),"=m" (curr->ip)
         : "m" (next->sp),"m" (next->ip)
-        : "ebx", "edi", "esi", "ebp", "eax"
+        : "cc", "memory"
+//        : "ebx", "edi", "esi", "ebp", "eax", "memory"
      
     );
 }
@@ -99,7 +102,7 @@ inline void
 __lwt_schedule ()
 {
     old_thread = current_thread;
-    current_thread = list_head_first(&run_queue, struct _lwt_t, linked_list_node);
+    current_thread = list_head_first_d(&run_queue, struct _lwt_t);
     printd("thread %d start executing from reschedule\n", current_thread->lwt_id);
     current_thread->state = LWT_RUNNING;
     __lwt_dispatch(&(old_thread->context), &(current_thread->context));
@@ -131,7 +134,7 @@ __initiate()
     /* initialize dead channel queue */
     list_head_init(&chan_dead);
 
-    list_head_append(&run_queue, current_thread, linked_list_node);
+    list_head_append_d(&run_queue, current_thread);
     printd("initialization complete\n");
 
 }
@@ -145,8 +148,8 @@ lwt_create(lwt_fn_t fn, void * data)
 
     if (!list_head_empty(&recycle_queue)) {
         /* recycle queue is not empty */
-        next_thread = list_head_first(&recycle_queue, struct _lwt_t, linked_list_node);
-        list_rem(next_thread, linked_list_node);
+        next_thread = list_head_first_d(&recycle_queue, struct _lwt_t);
+        list_rem_d(next_thread);
         _sp = next_thread->init_sp;
     }
     else
@@ -174,7 +177,7 @@ lwt_create(lwt_fn_t fn, void * data)
 
     printd("thread: %d has created thread: %d\n", current_thread->lwt_id, next_thread->lwt_id);
 
-    list_head_add(&run_queue, next_thread, linked_list_node);
+    list_head_add_d(&run_queue, next_thread);
 
     return next_thread;
 }
@@ -193,12 +196,12 @@ lwt_die(void * message)
         current_thread->merge_to->state = LWT_STATUS_RUNNABLE;
         current_thread->merge_to->last_word = message;
 
-        list_rem(current_thread->merge_to, linked_list_node);
-        list_head_add(&run_queue, current_thread->merge_to, linked_list_node);
+        list_rem_d(current_thread->merge_to);
+        list_head_add_d(&run_queue, current_thread->merge_to);
 
         current_thread->state = LWT_STATUS_ZOMBIES;
-        list_rem(current_thread, linked_list_node);
-        list_head_add(&recycle_queue, current_thread, linked_list_node);
+        list_rem_d(current_thread);
+        list_head_add_d(&recycle_queue, current_thread);
 
         printd("removed dead thread %d to recycle queue\n", current_thread->lwt_id);
     }
@@ -206,8 +209,8 @@ lwt_die(void * message)
     else
     {
         current_thread->state = LWT_STATUS_ZOMBIES;
-        list_rem(current_thread, linked_list_node);
-        list_head_add(&zombie_queue, current_thread, linked_list_node);
+        list_rem_d(current_thread);
+        list_head_add_d(&zombie_queue, current_thread);
 
         printd("removed dead thread %d to zombie queue\n", current_thread->lwt_id);
     }
@@ -238,11 +241,11 @@ lwt_yield(lwt_t yield_to)
     /* yield to NULL */
     if (yield_to)
     {
-        list_rem(yield_to, linked_list_node);
-        list_head_append(&run_queue, yield_to, linked_list_node);
+        list_rem_d(yield_to);
+        list_head_append_d(&run_queue, yield_to);
     }
-    list_rem(current_thread, linked_list_node);
-    list_head_add(&run_queue, current_thread, linked_list_node);
+    list_rem_d(current_thread);
+    list_head_add_d(&run_queue, current_thread);
 
     __lwt_schedule();
 
@@ -262,8 +265,8 @@ lwt_join(lwt_t thread_to_wait)
     if(thread_to_wait->state == LWT_STATUS_ZOMBIES)
     {
         printd("current thread is collecting a zombie thread\n");
-        list_rem(thread_to_wait, linked_list_node);
-        list_head_add(&recycle_queue, thread_to_wait, linked_list_node);
+        list_rem_d(thread_to_wait);
+        list_head_add_d(&recycle_queue, thread_to_wait);
 
         return thread_to_wait->last_word;
     }
@@ -276,8 +279,8 @@ lwt_join(lwt_t thread_to_wait)
     current_thread->block_for = BLOCKED_JOIN;
 
     /* Move to blocked queue */
-    list_rem(current_thread, linked_list_node);
-    list_head_add(&block_queue, current_thread, linked_list_node);
+    list_rem_d(current_thread);
+    list_head_add_d(&block_queue, current_thread);
 
     __lwt_schedule();
 
@@ -320,8 +323,8 @@ lwt_chan(int size)
     if (!list_head_empty(&chan_dead))
     {
         /* not empty */
-        chan = list_head_first(&chan_dead, struct _lwt_channel, chan_queue_node);
-        list_rem(chan, chan_queue_node);
+        chan = list_head_first_d(&chan_dead, struct _lwt_channel);
+        list_rem_d(chan);
         printd("create one channel from dead channel pool.\n");
     }
     else
@@ -346,8 +349,8 @@ lwt_chan_deref (lwt_chan_t chan)
     printd("thread %d has de-ref channel %d, sender left: %d.\n", current_thread->lwt_id, chan->chan_id, chan->snd_cnt);
     if (chan->snd_cnt == 0 && chan->receiver == NULL) {
         printd("channel %d has been freed from memory.\n", chan->chan_id);
-        list_rem(chan, chan_queue_node);
-        list_head_add(&chan_dead, chan, chan_queue_node);
+        list_rem_d(chan);
+        list_head_add_d(&chan_dead, chan);
     }
 }
 
@@ -362,9 +365,8 @@ lwt_snd(lwt_chan_t chan, void * data)
     }
     current_thread->message_data = data;
     printd("current_thread: %d, channel: %d\n", current_thread->lwt_id, chan->chan_id);
-    list_head_add(&(chan->sender_queue), current_thread, sender_queue_node);
-    list_rem(current_thread, linked_list_node);
-    list_head_add(&block_queue, current_thread, linked_list_node);
+    list_rem_d(current_thread);
+    list_head_add_d(&(chan->sender_queue), current_thread);
 
     current_thread->state = LWT_STATUS_BLOCKED;
     current_thread->block_for = BLOCKED_SENDING;
@@ -372,8 +374,8 @@ lwt_snd(lwt_chan_t chan, void * data)
     if (chan->receiver->state == LWT_STATUS_BLOCKED && chan->receiver->block_for == BLOCKED_RECEIVING)
     {
         chan->receiver->state = LWT_STATUS_RUNNABLE;
-        list_rem(chan->receiver, linked_list_node);
-        list_head_append(&run_queue, chan->receiver, linked_list_node);
+        list_rem_d(chan->receiver);
+        list_head_append_d(&run_queue, chan->receiver);
         printd("thread %d wake up and ready to receive data from channel %d.\n", chan->receiver->lwt_id, chan->chan_id);
     }
     __lwt_schedule();
@@ -396,19 +398,18 @@ lwt_rcv(lwt_chan_t chan)
         printd("thread %d is receiving channel %d, no sender yet.\n", current_thread->lwt_id, chan->chan_id);
         current_thread->state = LWT_STATUS_BLOCKED;
         current_thread->block_for = BLOCKED_RECEIVING;
-        list_rem(current_thread, linked_list_node);
-        list_head_add(&block_queue, current_thread, linked_list_node);
+        list_rem_d(current_thread);
+        list_head_add_d(&block_queue, current_thread);
         __lwt_schedule();
     }
     printd("thread %d resumed to receive data from channel %d.\n", current_thread->lwt_id, chan->chan_id);
 
-    lwt_t sender = list_head_first(&(chan->sender_queue), struct _lwt_t, sender_queue_node);
+    lwt_t sender = list_head_first_d(&(chan->sender_queue), struct _lwt_t);
     sender->state = LWT_STATUS_RUNNABLE;
     result = sender->message_data;
 
-    list_rem(sender, linked_list_node);
-    list_head_append(&run_queue, sender, linked_list_node);
-    list_rem(sender, sender_queue_node);
+    list_rem_d(sender);
+    list_head_append_d(&run_queue, sender);
     return result;
 }
 
@@ -416,7 +417,6 @@ lwt_rcv(lwt_chan_t chan)
 int lwt_snd_chan(lwt_chan_t through, lwt_chan_t sending)
 {
     int return_value = lwt_snd(through, (void *) sending);
-//    sending->snd_cnt = return_value ? sending->snd_cnt : sending->snd_cnt + 1;
     return return_value;
 }
 
@@ -454,7 +454,7 @@ __get_blocked_queue_size(enum block_reason block_for)
     struct list * curr = block_queue.l.n;
     while (curr != &(block_queue.l))
     {
-        if((container(curr, struct _lwt_t, linked_list_node))->block_for == block_for) cnt++;
+        if((container(curr, struct _lwt_t, list_node))->block_for == block_for) cnt++;
         curr = curr->n;
     }
     return cnt;
@@ -469,12 +469,12 @@ __print_a_thread_queue(struct list_head * list_to_print)
     {
         if (list_to_print == &(block_queue))
         {
-            printd("thread %d blocked with reason: ",(container(curr, struct _lwt_t, linked_list_node))->lwt_id);
-            if ((container(curr, struct _lwt_t, linked_list_node))->block_for == BLOCKED_JOIN) printd("joining.\n");
-            else if ((container(curr, struct _lwt_t, linked_list_node))->block_for == BLOCKED_RECEIVING) printd("receiving.\n");
+            printd("thread %d blocked with reason: ",(container(curr, struct _lwt_t, list_node))->lwt_id);
+            if ((container(curr, struct _lwt_t, list_node))->block_for == BLOCKED_JOIN) printd("joining.\n");
+            else if ((container(curr, struct _lwt_t, list_node))->block_for == BLOCKED_RECEIVING) printd("receiving.\n");
             else printd("sending.\n");
         }
-        else printd("thread %d.\n",(container(curr, struct _lwt_t, linked_list_node))->lwt_id);
+        else printd("thread %d.\n", (container(curr, struct _lwt_t, list_node))->lwt_id);
         curr = curr->n;
     }
 }
@@ -486,7 +486,7 @@ __print_a_chan_queue(struct list_head * list_to_print)
     struct list * curr = (list_to_print->l).n;
     while (curr != &(list_to_print->l))
     {
-        printd("channel %d.\n",(container(curr, struct _lwt_channel, chan_queue_node))->chan_id);
+        printd("channel %d.\n", (container(curr, struct _lwt_channel, list_node))->chan_id);
         curr = curr->n;
     }
 }

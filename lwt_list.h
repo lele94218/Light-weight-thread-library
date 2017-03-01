@@ -9,7 +9,7 @@ struct list {
 struct list_head {
     struct list l;
 };
-#define LIST_DEF_NAME list
+#define LIST_DEF_NAME list_node
 
 /* below two functions are universal list operation function */
 static inline void
