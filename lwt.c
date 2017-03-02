@@ -15,10 +15,13 @@ void __initiate (void) __attribute__((constructor));
 int lwt_counter = 0;
 int chan_counter = 0;
 int zombie_counter = 0;
+int block_counter = 0;
+int nrcving = 0;
+int nsnding = 0;
 
 /* four queues, one for thread running, one for blocking, one for zombies, one for recycle */
 struct list_head run_queue;
-struct list_head block_queue;
+//struct list_head block_queue;
 //struct list_head zombie_queue;
 struct list_head recycle_queue;
 
@@ -38,7 +41,7 @@ void __initiate(void);
 void __print_a_thread_queue(struct list_head *);
 void __print_a_chan_queue(struct list_head *);
 int __get_queue_size(struct list_head *);
-int __get_blocked_queue_size(enum block_reason);
+//int __get_blocked_queue_size(enum block_reason);
 
 
 /* --------------- inline function definition --------------- */
@@ -121,7 +124,7 @@ __initiate()
     list_head_init(&run_queue);
 
     /* initialize block_queue */
-    list_head_init(&block_queue);
+//    list_head_init(&block_queue);
 
     /* initialize recycle queue */
     list_head_init(&recycle_queue);
@@ -196,6 +199,8 @@ lwt_die(void * message)
     {
         current_thread->merge_to->state = LWT_STATUS_RUNNABLE;
         current_thread->merge_to->last_word = message;
+        
+        block_counter--;
 
         list_rem_d(current_thread->merge_to);
         list_head_add_d(&run_queue, current_thread->merge_to);
@@ -283,8 +288,8 @@ lwt_join(lwt_t thread_to_wait)
 
     /* Move to blocked queue */
     list_rem_d(current_thread);
-    list_head_add_d(&block_queue, current_thread);
-
+//    list_head_add_d(&block_queue, current_thread);
+    block_counter++;
     __lwt_schedule();
 
     printd("thread %d picked up dead threads %d's last word %d\n", current_thread->lwt_id, thread_to_wait->lwt_id, (int)current_thread->last_word);
@@ -370,12 +375,15 @@ lwt_snd(lwt_chan_t chan, void * data)
     printd("current_thread: %d, channel: %d\n", current_thread->lwt_id, chan->chan_id);
     list_rem_d(current_thread);
     list_head_add_d(&(chan->sender_queue), current_thread);
-
+    nsnding++;
+    block_counter++;
     current_thread->state = LWT_STATUS_BLOCKED;
     current_thread->block_for = BLOCKED_SENDING;
     printd("thread %d is waiting for channel %d's receiver thread %d.\n", current_thread->lwt_id, chan->chan_id, chan->receiver->lwt_id);
     if (chan->receiver->state == LWT_STATUS_BLOCKED && chan->receiver->block_for == BLOCKED_RECEIVING)
     {
+        nrcving--;
+        block_counter--;
         chan->receiver->state = LWT_STATUS_RUNNABLE;
         list_rem_d(chan->receiver);
         list_head_append_d(&run_queue, chan->receiver);
@@ -402,13 +410,17 @@ lwt_rcv(lwt_chan_t chan)
         current_thread->state = LWT_STATUS_BLOCKED;
         current_thread->block_for = BLOCKED_RECEIVING;
         list_rem_d(current_thread);
-        list_head_add_d(&block_queue, current_thread);
+//        list_head_add_d(&block_queue, current_thread);
+        block_counter++;
+        nrcving++;
         __lwt_schedule();
     }
     printd("thread %d resumed to receive data from channel %d.\n", current_thread->lwt_id, chan->chan_id);
 
     lwt_t sender = list_head_first_d(&(chan->sender_queue), struct _lwt_t);
     sender->state = LWT_STATUS_RUNNABLE;
+    nsnding--;
+    block_counter--;
     result = sender->message_data;
 
     list_rem_d(sender);
@@ -450,18 +462,18 @@ __get_queue_size(struct list_head * input_list)
 }
 
 /* get the size of blocked thread with a particular block reason */
-int
-__get_blocked_queue_size(enum block_reason block_for)
-{
-    int cnt = 0;
-    struct list * curr = block_queue.l.n;
-    while (curr != &(block_queue.l))
-    {
-        if((container(curr, struct _lwt_t, list_node))->block_for == block_for) cnt++;
-        curr = curr->n;
-    }
-    return cnt;
-}
+//int
+//__get_blocked_queue_size(enum block_reason block_for)
+//{
+//    int cnt = 0;
+//    struct list * curr = block_queue.l.n;
+//    while (curr != &(block_queue.l))
+//    {
+//        if((container(curr, struct _lwt_t, list_node))->block_for == block_for) cnt++;
+//        curr = curr->n;
+//   }
+//    return cnt;
+//}
 
 /* print the content of a thread queue */
 void
@@ -470,14 +482,7 @@ __print_a_thread_queue(struct list_head * list_to_print)
     struct list * curr = (list_to_print->l).n;
     while (curr != &(list_to_print->l))
     {
-        if (list_to_print == &(block_queue))
-        {
-            printd("thread %d blocked with reason: ",(container(curr, struct _lwt_t, list_node))->lwt_id);
-            if ((container(curr, struct _lwt_t, list_node))->block_for == BLOCKED_JOIN) printd("joining.\n");
-            else if ((container(curr, struct _lwt_t, list_node))->block_for == BLOCKED_RECEIVING) printd("receiving.\n");
-            else printd("sending.\n");
-        }
-        else printd("thread %d.\n", (container(curr, struct _lwt_t, list_node))->lwt_id);
+        printd("thread %d.\n", (container(curr, struct _lwt_t, list_node))->lwt_id);
         curr = curr->n;
     }
 }
@@ -504,7 +509,7 @@ lwt_info(enum lwt_info_t t)
         case LWT_INFO_NTHD_RUNNABLE:
             return __get_queue_size(&run_queue);
         case LWT_INFO_NTHD_BLOCKED:
-            return __get_queue_size(&block_queue);
+            return block_counter;
         case LWT_INFO_NTHD_ZOMBIES:
             return zombie_counter;
         case LWT_INFO_NTHD_RECYCLE:
@@ -514,11 +519,9 @@ lwt_info(enum lwt_info_t t)
         case LWT_INFO_DCHAN:
             return __get_queue_size(&chan_dead);
         case LWT_INFO_NSNDING:
-            return __get_blocked_queue_size(BLOCKED_SENDING);
+            return nsnding;
         case LWT_INFO_NRCVING:
-            return __get_blocked_queue_size(BLOCKED_RECEIVING);
-        case LWT_INFO_NJOINING:
-            return __get_blocked_queue_size(BLOCKED_JOIN);
+            return nrcving;
         default:
             printd("cannot identify printing instructions\n");
             return -1;
@@ -535,14 +538,6 @@ print_queue_content(enum lwt_info_t input)
             printd("runnable queue showed as below: \n");
             __print_a_thread_queue(&run_queue);
             break;
-        case LWT_INFO_NTHD_BLOCKED:
-            printd("blocked queue showed as below: \n");
-            __print_a_thread_queue(&block_queue);
-            break;
-//        case LWT_INFO_NTHD_ZOMBIES:
-//            printd("zombie queue showed as below: \n");
-//            __print_a_thread_queue(&zombie_queue);
-//            break;
         case LWT_INFO_NTHD_RECYCLE:
             printd("recycle queue showed as below: \n");
             __print_a_thread_queue(&recycle_queue);
