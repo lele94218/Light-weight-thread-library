@@ -14,11 +14,12 @@ void __initiate (void) __attribute__((constructor));
 /* used for assigning thread and channel id */
 int lwt_counter = 0;
 int chan_counter = 0;
+int zombie_counter = 0;
 
 /* four queues, one for thread running, one for blocking, one for zombies, one for recycle */
 struct list_head run_queue;
 struct list_head block_queue;
-struct list_head zombie_queue;
+//struct list_head zombie_queue;
 struct list_head recycle_queue;
 
 /* two channel queues, one for working channel, one for dead channel */
@@ -126,7 +127,7 @@ __initiate()
     list_head_init(&recycle_queue);
 
     /* initialize zombie_queue */
-    list_head_init(&zombie_queue);
+//    list_head_init(&zombie_queue);
 
     /* initialize working channel queue */
     list_head_init(&chan_working);
@@ -200,6 +201,7 @@ lwt_die(void * message)
         list_head_add_d(&run_queue, current_thread->merge_to);
 
         current_thread->state = LWT_STATUS_ZOMBIES;
+        
         list_rem_d(current_thread);
         list_head_add_d(&recycle_queue, current_thread);
 
@@ -210,8 +212,8 @@ lwt_die(void * message)
     {
         current_thread->state = LWT_STATUS_ZOMBIES;
         list_rem_d(current_thread);
-        list_head_add_d(&zombie_queue, current_thread);
-
+//        list_head_add_d(&zombie_queue, current_thread);
+        zombie_counter++;
         printd("removed dead thread %d to zombie queue\n", current_thread->lwt_id);
     }
     /* go die, pass flow to another thread */
@@ -266,6 +268,7 @@ lwt_join(lwt_t thread_to_wait)
     {
         printd("current thread is collecting a zombie thread\n");
         list_rem_d(thread_to_wait);
+        zombie_counter--;
         list_head_add_d(&recycle_queue, thread_to_wait);
 
         return thread_to_wait->last_word;
@@ -503,7 +506,7 @@ lwt_info(enum lwt_info_t t)
         case LWT_INFO_NTHD_BLOCKED:
             return __get_queue_size(&block_queue);
         case LWT_INFO_NTHD_ZOMBIES:
-            return __get_queue_size(&zombie_queue);
+            return zombie_counter;
         case LWT_INFO_NTHD_RECYCLE:
             return __get_queue_size(&recycle_queue);
         case LWT_INFO_NCHAN:
@@ -536,10 +539,10 @@ print_queue_content(enum lwt_info_t input)
             printd("blocked queue showed as below: \n");
             __print_a_thread_queue(&block_queue);
             break;
-        case LWT_INFO_NTHD_ZOMBIES:
-            printd("zombie queue showed as below: \n");
-            __print_a_thread_queue(&zombie_queue);
-            break;
+//        case LWT_INFO_NTHD_ZOMBIES:
+//            printd("zombie queue showed as below: \n");
+//            __print_a_thread_queue(&zombie_queue);
+//            break;
         case LWT_INFO_NTHD_RECYCLE:
             printd("recycle queue showed as below: \n");
             __print_a_thread_queue(&recycle_queue);
