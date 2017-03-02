@@ -146,7 +146,7 @@ lwt_create(lwt_fn_t fn, void * data)
     lwt_t next_thread;
     uint _sp;
 
-    if (!list_head_empty(&recycle_queue)) {
+    if (unlikely(!list_head_empty(&recycle_queue))) {
         /* recycle queue is not empty */
         next_thread = list_head_first_d(&recycle_queue, struct _lwt_t);
         list_rem_d(next_thread);
@@ -191,7 +191,7 @@ lwt_die(void * message)
     current_thread->last_word = message;
 
     /* if someone is waiting to join this one, return and go to recycle queue */
-    if (current_thread->merge_to)
+    if (unlikely((long int)current_thread->merge_to))
     {
         current_thread->merge_to->state = LWT_STATUS_RUNNABLE;
         current_thread->merge_to->last_word = message;
@@ -239,7 +239,7 @@ lwt_yield(lwt_t yield_to)
         return 0;
     }
     /* yield to NULL */
-    if (yield_to)
+    if (likely((long int)yield_to))
     {
         list_rem_d(yield_to);
         list_head_append_d(&run_queue, yield_to);
@@ -262,7 +262,7 @@ lwt_join(lwt_t thread_to_wait)
         printd("error: thread to wait is NULL or itself or nobody waits it\n");
         return NULL;
     }
-    if(thread_to_wait->state == LWT_STATUS_ZOMBIES)
+    if(unlikely(thread_to_wait->state == LWT_STATUS_ZOMBIES))
     {
         printd("current thread is collecting a zombie thread\n");
         list_rem_d(thread_to_wait);
@@ -340,7 +340,7 @@ lwt_chan(int size)
 void
 lwt_chan_deref (lwt_chan_t chan)
 {
-    if (chan->receiver == current_thread)
+    if (unlikely(chan->receiver == current_thread))
     {
         chan->receiver = NULL;
         printd("thread %d is nolonger receiver of channel %d.\n", current_thread->lwt_id, chan->chan_id);
@@ -358,7 +358,7 @@ lwt_chan_deref (lwt_chan_t chan)
 int
 lwt_snd(lwt_chan_t chan, void * data)
 {
-    if (chan->receiver == NULL)
+    if (unlikely(chan->receiver == NULL))
     {
         printd("thread %d has send data to channel %d, but no receiver.\n", current_thread->lwt_id, chan->chan_id);
         return -1;

@@ -16,6 +16,9 @@
 /* define NULL pointer */
 #define LWT_NULL NULL
 
+#define likely(x)   __builtin_expect((x),1)
+#define unlikely(x) __builtin_expect((x),0)
+
 /* Data type redefinition */
 typedef unsigned int uint;
 typedef unsigned short ushort;
@@ -83,7 +86,7 @@ struct _lwt_t
 //    struct list linked_list_node;
 //
 //    /* Sender list node, its position at a sender queue */
-//    struct list sender_queue_node;
+
     struct list list_node;
 
     /* Thread id */
