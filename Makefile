@@ -2,7 +2,7 @@ CC = gcc
 CFLAGS = -Wall -O3
 DEBUG = -g -D DEBUG
 TARGET = ./build/main
-SRCS = main2.c lwt.c
+SRCS = main2.c lwt.c lwt_chl.c
 MAIN = lwt
 
 all: $(MAIN)
