@@ -1,7 +1,7 @@
 CC = gcc
 CFLAGS = -Wall -O3
 DEBUG = -g -D DEBUG
-TARGET = main.o
+TARGET = ./build/main
 SRCS = main2.c lwt.c
 MAIN = lwt
 
