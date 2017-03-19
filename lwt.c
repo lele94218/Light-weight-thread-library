@@ -41,7 +41,7 @@ void __initiate(void);
 void __print_a_thread_queue(struct list_head *);
 void __print_a_chan_queue(struct list_head *);
 int __get_queue_size(struct list_head *);
-//int __get_blocked_queue_size(enum block_reason);
+//int __get_blocked_queue_size(enum block_status);
 
 
 /* --------------- inline function definition --------------- */
@@ -52,7 +52,7 @@ __init_thread(lwt_t created_thread)
 {
     created_thread->lwt_id = lwt_counter++;
     created_thread->state = LWT_STATUS_RUNNABLE;
-    created_thread->merge_to = NULL;
+    created_thread->parent = NULL;
     created_thread->last_word = NULL;
 }
 
@@ -195,15 +195,15 @@ lwt_die(void * message)
     current_thread->last_word = message;
 
     /* if someone is waiting to join this one, return and go to recycle queue */
-    if (unlikely((long int)current_thread->merge_to))
+    if (unlikely((long int)current_thread->parent))
     {
-        current_thread->merge_to->state = LWT_STATUS_RUNNABLE;
-        current_thread->merge_to->last_word = message;
+        current_thread->parent->state = LWT_STATUS_RUNNABLE;
+        current_thread->parent->last_word = message;
         
         block_counter--;
 
-        list_rem_d(current_thread->merge_to);
-        list_head_add_d(&run_queue, current_thread->merge_to);
+        list_rem_d(current_thread->parent);
+        list_head_add_d(&run_queue, current_thread->parent);
 
         current_thread->state = LWT_STATUS_ZOMBIES;
         
@@ -264,7 +264,7 @@ void *
 lwt_join(lwt_t thread_to_wait)
 {
 
-    if(!thread_to_wait || thread_to_wait == current_thread || thread_to_wait->merge_to)
+    if(!thread_to_wait || thread_to_wait == current_thread || thread_to_wait->parent)
     {
         printd("error: thread to wait is NULL or itself or nobody waits it\n");
         return NULL;
@@ -279,7 +279,7 @@ lwt_join(lwt_t thread_to_wait)
         return thread_to_wait->last_word;
     }
     /* update both thread */
-    thread_to_wait->merge_to = current_thread;
+    thread_to_wait->parent = current_thread;
 
     printd("thread %d blocked, waiting for thread %d to join\n", current_thread->lwt_id, thread_to_wait->lwt_id);
 
@@ -463,7 +463,7 @@ __get_queue_size(struct list_head * input_list)
 
 /* get the size of blocked thread with a particular block reason */
 //int
-//__get_blocked_queue_size(enum block_reason block_for)
+//__get_blocked_queue_size(enum block_status block_for)
 //{
 //    int cnt = 0;
 //    struct list * curr = block_queue.l.n;

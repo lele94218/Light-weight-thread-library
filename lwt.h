@@ -63,8 +63,8 @@ enum lwt_status
     LWT_RUNNING
 };
 
-/* if status is blocked, this shows reason for blockage */
-enum block_reason
+/* if status is blocked, this shows status for blockage */
+enum block_status
 {
     /* The thread is running. */
     BLOCKED_JOIN = 0,
@@ -97,10 +97,10 @@ struct _lwt_t
     enum lwt_status state;
 
     /* the reason for blockage */
-    enum block_reason block_for;
+    enum block_status block_for;
 
-    /* thread regarding join, the master who is waiting to collect this thread */
-    struct _lwt_t * merge_to;
+    /* parent thread */
+    struct _lwt_t * parent;
 
     /* data sending to other thread */
     void * message_data;
