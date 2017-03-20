@@ -19,8 +19,6 @@ extern struct list_head chan_dead;
 
 /* four queues, one for thread running, one for blocking, one for zombies, one for recycle */
 struct list_head run_queue;
-//struct list_head block_queue;
-//struct list_head zombie_queue;
 struct list_head recycle_queue;
 
 
@@ -49,6 +47,9 @@ __init_thread(lwt_t created_thread)
     created_thread->state = LWT_STATUS_RUNNABLE;
     created_thread->parent = NULL;
     created_thread->last_word = NULL;
+    created_thread->chl = lwt_chan(0);
+    /* NOTE: here snd_cnt is manually changed */
+    created_thread->chl->snd_cnt += 1;
 }
 
 
@@ -103,26 +104,23 @@ __lwt_schedule ()
 void
 __initiate()
 {
-    current_thread = (lwt_t) malloc (sizeof(struct _lwt_t));
-    __init_thread(current_thread);
 
     /* initialize run_queue */
     list_head_init(&run_queue);
 
-    /* initialize block_queue */
-//    list_head_init(&block_queue);
-
     /* initialize recycle queue */
     list_head_init(&recycle_queue);
 
-    /* initialize zombie_queue */
-//    list_head_init(&zombie_queue);
     
     /* initialize working channel queue */
     list_head_init(&chan_working);
     
     /* initialize dead channel queue */
     list_head_init(&chan_dead);
+    
+    
+    current_thread = (lwt_t) malloc (sizeof(struct _lwt_t));
+    __init_thread(current_thread);
 
     list_head_append_d(&run_queue, current_thread);
     printd("initialization complete\n");
@@ -180,30 +178,48 @@ lwt_die(void * message)
 
     current_thread->last_word = message;
 
-    /* if someone is waiting to join this one, return and go to recycle queue */
+//    /* if someone is waiting to join this one, return and go to recycle queue */
+//    if (unlikely((long int)current_thread->parent))
+//    {
+//        current_thread->parent->state = LWT_STATUS_RUNNABLE;
+//        current_thread->parent->last_word = message;
+//        
+//        block_counter--;
+//
+//        list_rem_d(current_thread->parent);
+//        list_head_add_d(&run_queue, current_thread->parent);
+//
+//        current_thread->state = LWT_STATUS_ZOMBIES;
+//        
+//        list_rem_d(current_thread);
+//        list_head_add_d(&recycle_queue, current_thread);
+//
+//        printd("removed dead thread %d to recycle queue\n", current_thread->lwt_id);
+//    }
+//    /* nobody is currently waiting to join this one, becomes a zombie */
+//    else
+//    {
+//        current_thread->state = LWT_STATUS_ZOMBIES;
+//        list_rem_d(current_thread);
+////        list_head_add_d(&zombie_queue, current_thread);
+//        zombie_counter++;
+//        printd("removed dead thread %d to zombie queue\n", current_thread->lwt_id);
+//    }
+    
     if (unlikely((long int)current_thread->parent))
     {
-        current_thread->parent->state = LWT_STATUS_RUNNABLE;
-        current_thread->parent->last_word = message;
-        
-        block_counter--;
-
-        list_rem_d(current_thread->parent);
-        list_head_add_d(&run_queue, current_thread->parent);
-
+        lwt_snd(current_thread->chl, message);
         current_thread->state = LWT_STATUS_ZOMBIES;
         
         list_rem_d(current_thread);
         list_head_add_d(&recycle_queue, current_thread);
-
+        
         printd("removed dead thread %d to recycle queue\n", current_thread->lwt_id);
     }
-    /* nobody is currently waiting to join this one, becomes a zombie */
     else
     {
         current_thread->state = LWT_STATUS_ZOMBIES;
         list_rem_d(current_thread);
-//        list_head_add_d(&zombie_queue, current_thread);
         zombie_counter++;
         printd("removed dead thread %d to zombie queue\n", current_thread->lwt_id);
     }
@@ -264,23 +280,28 @@ lwt_join(lwt_t thread_to_wait)
 
         return thread_to_wait->last_word;
     }
-    /* update both thread */
+    
+    /* update oneside thread */
     thread_to_wait->parent = current_thread;
-
-    printd("thread %d blocked, waiting for thread %d to join\n", current_thread->lwt_id, thread_to_wait->lwt_id);
-
-    current_thread->state = LWT_STATUS_BLOCKED;
-    current_thread->block_for = BLOCKED_JOIN;
-
-    /* Move to blocked queue */
-    list_rem_d(current_thread);
-//    list_head_add_d(&block_queue, current_thread);
-    block_counter++;
-    __lwt_schedule();
-
-    printd("thread %d picked up dead threads %d's last word %d\n", current_thread->lwt_id, thread_to_wait->lwt_id, (int)current_thread->last_word);
-
-    return current_thread->last_word;
+//
+//    printd("thread %d blocked, waiting for thread %d to join\n", current_thread->lwt_id, thread_to_wait->lwt_id);
+//
+//    current_thread->state = LWT_STATUS_BLOCKED;
+//    current_thread->block_for = BLOCKED_JOIN;
+//
+//    /* Move to blocked queue */
+//    list_rem_d(current_thread);
+////    list_head_add_d(&block_queue, current_thread);
+//    
+//    block_counter++;
+//    __lwt_schedule();
+//
+//    printd("thread %d picked up dead threads %d's last word %d\n", current_thread->lwt_id, thread_to_wait->lwt_id, (int)current_thread->last_word);
+//
+//    return current_thread->last_word;
+    return lwt_rcv(thread_to_wait->chl);
+    
+    
 }
 
 /* return current thread */

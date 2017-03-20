@@ -8,6 +8,8 @@ extern lwt_t current_thread;
 extern struct list_head run_queue;
 extern struct list_head recycle_queue;
 
+extern void __lwt_schedule();
+
 
 
 /* two channel queues, one for working channel, one for dead channel */
@@ -50,6 +52,7 @@ lwt_create_chan(lwt_chan_fn_t fn, lwt_chan_t chan)
     printd("thread %d has created thread %d with channel %d.\n", current_thread->lwt_id, created_thread->lwt_id,chan->chan_id);
     return created_thread;
 }
+
 /* create a channel, current_thread is the receiver */
 lwt_chan_t
 lwt_chan(int size)
