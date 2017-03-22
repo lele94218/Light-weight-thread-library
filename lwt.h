@@ -74,6 +74,11 @@ enum block_status
     BLOCKED_SENDING,
 };
 
+enum lwt_flags_t
+{
+    LWT_NOJOIN = 1,
+};
+
 /* define the context of a thread */
 struct _lwt_context
 {
@@ -100,6 +105,12 @@ struct _lwt_channel
     struct _lwt_t * receiver;
 };
 typedef struct _lwt_channel * lwt_chan_t;
+
+struct _lwt_cgrp
+{
+    struct list_head cgrp;
+};
+typedef struct _lwt_cgrp * lwt_cgrp_t;
 
 /* This structure describes a LWT thread. */
 struct _lwt_t
@@ -132,6 +143,8 @@ struct _lwt_t
     struct _lwt_context context;
     
     lwt_chan_t chl;
+    
+    int nojoin;
 };
 typedef struct _lwt_t * lwt_t;
 
@@ -144,7 +157,7 @@ typedef void * (*lwt_chan_fn_t)(lwt_chan_t);
 
 
 /* --------------------------- Funciton declaration for lwt thread operation --------------------------- */
-lwt_t  lwt_create(lwt_fn_t fn, void * data);
+lwt_t  lwt_create(lwt_fn_t fn, void * data, enum lwt_flags_t flags);
 void * lwt_join(lwt_t thread_to_wait);
 void lwt_die(void *);
 int lwt_yield(lwt_t strong_thread);
@@ -160,6 +173,15 @@ void *lwt_rcv(lwt_chan_t c);
 int lwt_snd_chan(lwt_chan_t c, lwt_chan_t sending);
 lwt_chan_t lwt_rcv_chan(lwt_chan_t c);
 lwt_t lwt_create_chan(lwt_chan_fn_t fn, lwt_chan_t c);
+
+lwt_cgrp_t lwt_cgrp (void);
+int lwt_cgrp_free (lwt_cgrp_t);
+int lwt_cgrp_add (lwt_cgrp_t, lwt_chan_t);
+int lwt_cgrp_rem(lwt_cgrp_t, lwt_chan_t);
+lwt_chan_t lwt_cgrp_wait (lwt_cgrp_t);
+
+void lwt_chan_mark_set(lwt_chan_t, void *);
+void *lwt_chan_mark_get(lwt_chan_t);
 
 /* --------------------------- debugging function --------------------------- */
 void print_queue_content(enum lwt_info_t);

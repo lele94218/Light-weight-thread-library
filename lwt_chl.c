@@ -47,7 +47,7 @@ __init_chan(lwt_chan_t chan)
 lwt_t
 lwt_create_chan(lwt_chan_fn_t fn, lwt_chan_t chan)
 {
-    lwt_t created_thread = lwt_create((void *)fn, (void *)chan);
+    lwt_t created_thread = lwt_create((void *)fn, (void *)chan, 0);
     chan->snd_cnt += 1;
     printd("thread %d has created thread %d with channel %d.\n", current_thread->lwt_id, created_thread->lwt_id,chan->chan_id);
     return created_thread;

@@ -50,6 +50,7 @@ __init_thread(lwt_t created_thread)
     created_thread->chl = lwt_chan(0);
     /* NOTE: here snd_cnt is manually changed */
     created_thread->chl->snd_cnt += 1;
+    created_thread->nojoin = 0;
 }
 
 
@@ -129,7 +130,7 @@ __initiate()
 
 /* create a thread, return its lwt_t pointer */
 lwt_t
-lwt_create(lwt_fn_t fn, void * data)
+lwt_create(lwt_fn_t fn, void * data, enum lwt_flags_t flags)
 {
     lwt_t next_thread;
     uint _sp;
@@ -162,6 +163,10 @@ lwt_create(lwt_fn_t fn, void * data)
 
     next_thread->context.sp = _sp;
     next_thread->context.ip = (uint) __lwt_trampoline;
+    
+    if (flags & LWT_NOJOIN) {
+        next_thread->nojoin = 1;
+    }
 
     printd("thread: %d has created thread: %d\n", current_thread->lwt_id, next_thread->lwt_id);
 
@@ -267,7 +272,7 @@ void *
 lwt_join(lwt_t thread_to_wait)
 {
 
-    if(!thread_to_wait || thread_to_wait == current_thread || thread_to_wait->parent)
+    if(!thread_to_wait || thread_to_wait == current_thread || thread_to_wait->parent || thread_to_wait->nojoin)
     {
         printd("error: thread to wait is NULL or itself or nobody waits it\n");
         return NULL;
