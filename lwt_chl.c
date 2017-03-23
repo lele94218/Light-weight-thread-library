@@ -139,12 +139,15 @@ lwt_snd(lwt_chan_t chan, void * data)
     }
     if (size == 0) {
         chan->event = 1;
-        if (!list_head_empty(&chan->cgroup->wait_queue)) {
-            lwt_t waiter = list_head_first_d(&(chan->cgroup->wait_queue), struct _lwt_t);
-            block_counter--;
-            list_rem_d(waiter);
-            waiter->state = LWT_STATUS_RUNNABLE;
-            list_head_append_d(&run_queue, waiter);
+        if ( chan->cgroup )
+        {
+            if (!list_head_empty(&chan->cgroup->wait_queue)) {
+                lwt_t waiter = list_head_first_d(&(chan->cgroup->wait_queue), struct _lwt_t);
+                block_counter--;
+                list_rem_d(waiter);
+                waiter->state = LWT_STATUS_RUNNABLE;
+                list_head_append_d(&run_queue, waiter);
+            }
         }
         
     }
@@ -335,28 +338,28 @@ int lwt_cgrp_free (lwt_cgrp_t cgrp){
 /* current thread waits on the channel group*/
 lwt_chan_t lwt_cgrp_wait (lwt_cgrp_t cgrp)
 {
-    lwt_chan_t current = list_head_first(&cgrp->cgrp, struct _lwt_channel, cglist);
-    do {
-        if (current->event == 1) {
-            return current;
-        }
-        current = list_next(current, cglist);
+    if (list_head_empty(&cgrp->cgrp)) {
+        return NULL;
     }
-    while (current != list_head_last(&cgrp->cgrp, struct _lwt_channel, cglist));
-    current_thread->state = LWT_STATUS_BLOCKED;
-    list_rem_d(current_thread);
-    //        list_head_add_d(&block_queue, current_thread);
-    list_head_add_d(&cgrp->wait_queue, current_thread);
-    block_counter++;
-    __lwt_schedule();
-    lwt_chan_t cur = list_head_first(&cgrp->cgrp, struct _lwt_channel, cglist);
-    do {
-        if (cur->event == 1) {
-            return cur;
+    
+    while (1) {
+        lwt_chan_t current = list_head_first(&cgrp->cgrp, struct _lwt_channel, cglist);
+
+        do {
+            if (current->event == 1) {
+                return current;
+            }
+            current = list_next(current, cglist);
         }
-        cur = list_next(cur, cglist);
+        while (current != list_head_last(&cgrp->cgrp, struct _lwt_channel, cglist));
+        current_thread->state = LWT_STATUS_BLOCKED;
+        list_rem_d(current_thread);
+        //        list_head_add_d(&block_queue, current_thread);
+        list_head_add_d(&cgrp->wait_queue, current_thread);
+        block_counter++;
+        __lwt_schedule();
     }
-    while (cur != list_head_last(&cgrp->cgrp, struct _lwt_channel, cglist));
+
     return NULL;
 }
 
