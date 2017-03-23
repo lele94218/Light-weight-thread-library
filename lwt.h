@@ -130,6 +130,8 @@ struct _lwt_channel
     lwt_cgrp_t cgroup;
     
     int event;
+    
+    void * mark;
 };
 typedef struct _lwt_channel * lwt_chan_t;
 

@@ -292,6 +292,9 @@ lwt_cgrp_t lwt_cgrp (void)
 
 int lwt_cgrp_add (lwt_cgrp_t cgrp, lwt_chan_t chan)
 {
+    if (chan->cgroup) {
+        return -1;
+    }
     list_head_append(&cgrp->cgrp, chan, cglist);
     chan->cgroup = cgrp;
     return 0;
@@ -299,12 +302,26 @@ int lwt_cgrp_add (lwt_cgrp_t cgrp, lwt_chan_t chan)
 
 int lwt_cgrp_rem(lwt_cgrp_t cgrp, lwt_chan_t chan)
 {
+    if (chan->event) {
+        return 1;
+    }
+    if (chan->cgroup != cgrp) {
+        return -1;
+    }
     list_rem(chan, cglist);
     chan->cgroup = NULL;
     return 0;
 }
 
 int lwt_cgrp_free (lwt_cgrp_t cgrp){
+    lwt_chan_t current = list_head_first(&cgrp->cgrp, struct _lwt_channel, cglist);
+    do {
+        if (current->event == 1) {
+            return -1;
+        }
+        current = list_next(current, cglist);
+    }
+    while (current != list_head_last(&cgrp->cgrp, struct _lwt_channel, cglist));
     free(cgrp);
     return 0;
 }
@@ -336,6 +353,14 @@ lwt_chan_t lwt_cgrp_wait (lwt_cgrp_t cgrp)
     return NULL;
 }
 
+void lwt_chan_mark_set(lwt_chan_t chan, void * mark)
+{
+    chan->mark = mark;
+}
+void *lwt_chan_mark_get(lwt_chan_t chan)
+{
+    return chan->mark;
+}
 
 /* --------------- internal function for user level debugging --------------- */
 
