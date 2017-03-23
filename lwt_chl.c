@@ -135,6 +135,17 @@ lwt_snd(lwt_chan_t chan, void * data)
         current_thread->block_for = BLOCKED_SENDING;
         __lwt_schedule();
     }
+    if (size == 0) {
+        chan->event = 1;
+        if (!list_head_empty(&chan->cgroup->wait_queue)) {
+            lwt_t waiter = list_head_first_d(&(chan->cgroup->wait_queue), struct _lwt_t);
+            block_counter--;
+            list_rem_d(waiter);
+            waiter->state = LWT_STATUS_RUNNABLE;
+            list_head_append_d(&run_queue, waiter);
+        }
+        
+    }
     struct br_node * bn = malloc(sizeof(struct br_node));
     bn->datapr = data;
 
@@ -227,6 +238,8 @@ lwt_rcv(lwt_chan_t chan)
     struct br_node * result;
     result = list_head_first_d(&chan->br->br, struct br_node);
     
+    chan->event = 0;
+    
     if (!list_head_empty(&(chan->sender_queue)))
     {
         lwt_t sender = list_head_first_d(&(chan->sender_queue), struct _lwt_t);
@@ -280,12 +293,14 @@ lwt_cgrp_t lwt_cgrp (void)
 int lwt_cgrp_add (lwt_cgrp_t cgrp, lwt_chan_t chan)
 {
     list_head_append(&cgrp->cgrp, chan, cglist);
+    chan->cgroup = cgrp;
     return 0;
 }
 
 int lwt_cgrp_rem(lwt_cgrp_t cgrp, lwt_chan_t chan)
 {
     list_rem(chan, cglist);
+    chan->cgroup = NULL;
     return 0;
 }
 
@@ -294,6 +309,32 @@ int lwt_cgrp_free (lwt_cgrp_t cgrp){
     return 0;
 }
 
+lwt_chan_t lwt_cgrp_wait (lwt_cgrp_t cgrp)
+{
+    lwt_chan_t current = list_head_first(&cgrp->cgrp, struct _lwt_channel, cglist);
+    do {
+        if (current->event == 1) {
+            return current;
+        }
+        current = list_next(current, cglist);
+    }
+    while (current != list_head_last(&cgrp->cgrp, struct _lwt_channel, cglist));
+    current_thread->state = LWT_STATUS_BLOCKED;
+    list_rem_d(current_thread);
+    //        list_head_add_d(&block_queue, current_thread);
+    list_head_add_d(&cgrp->wait_queue, current_thread);
+    block_counter++;
+    __lwt_schedule();
+    lwt_chan_t cur = list_head_first(&cgrp->cgrp, struct _lwt_channel, cglist);
+    do {
+        if (cur->event == 1) {
+            return cur;
+        }
+        cur = list_next(cur, cglist);
+    }
+    while (cur != list_head_last(&cgrp->cgrp, struct _lwt_channel, cglist));
+    return NULL;
+}
 
 
 /* --------------- internal function for user level debugging --------------- */

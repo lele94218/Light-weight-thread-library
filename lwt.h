@@ -98,6 +98,12 @@ struct br_node
     void * datapr;
 };
 
+struct _lwt_cgrp
+{
+    struct list_head cgrp;
+    struct list_head wait_queue;
+};
+typedef struct _lwt_cgrp * lwt_cgrp_t;
 
 /* This structure describes a lwt channel */
 struct _lwt_channel
@@ -120,14 +126,14 @@ struct _lwt_channel
     struct _lwt_t * receiver;
     
     buffer_ring br;
+    
+    lwt_cgrp_t cgroup;
+    
+    int event;
 };
 typedef struct _lwt_channel * lwt_chan_t;
 
-struct _lwt_cgrp
-{
-    struct list_head cgrp;
-};
-typedef struct _lwt_cgrp * lwt_cgrp_t;
+
 
 /* This structure describes a LWT thread. */
 struct _lwt_t
