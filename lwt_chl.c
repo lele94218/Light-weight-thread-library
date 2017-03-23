@@ -188,6 +188,32 @@ lwt_chan_t lwt_rcv_chan(lwt_chan_t chan)
     return rec;
 }
 
+lwt_cgrp_t lwt_cgrp (void)
+{
+    lwt_cgrp_t cgrp = malloc(sizeof(struct _lwt_cgrp));
+    list_head_init(&cgrp->cgrp);
+    return cgrp;
+}
+
+int lwt_cgrp_add (lwt_cgrp_t cgrp, lwt_chan_t chan)
+{
+    list_head_append(&cgrp->cgrp, chan, cglist);
+    return 0;
+}
+
+int lwt_cgrp_rem(lwt_cgrp_t cgrp, lwt_chan_t chan)
+{
+    list_rem(chan, cglist);
+    return 0;
+}
+
+int lwt_cgrp_free (lwt_cgrp_t cgrp){
+    free(cgrp);
+    return 0;
+}
+
+
+
 /* --------------- internal function for user level debugging --------------- */
 
 /* get a queue size */

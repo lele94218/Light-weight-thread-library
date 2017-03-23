@@ -98,6 +98,8 @@ struct _lwt_channel
     /* Linked list node, used to find its position in global channel queue */
     struct list list_node;
     
+    struct list cglist;
+    
     /* number of senders have access to this channel */
     int snd_cnt;
     
@@ -175,10 +177,10 @@ lwt_chan_t lwt_rcv_chan(lwt_chan_t c);
 lwt_t lwt_create_chan(lwt_chan_fn_t fn, lwt_chan_t c);
 
 lwt_cgrp_t lwt_cgrp (void);
-int lwt_cgrp_free (lwt_cgrp_t);
-int lwt_cgrp_add (lwt_cgrp_t, lwt_chan_t);
-int lwt_cgrp_rem(lwt_cgrp_t, lwt_chan_t);
-lwt_chan_t lwt_cgrp_wait (lwt_cgrp_t);
+int lwt_cgrp_free (lwt_cgrp_t cgrp);
+int lwt_cgrp_add (lwt_cgrp_t cgrp, lwt_chan_t chan);
+int lwt_cgrp_rem(lwt_cgrp_t cgrp, lwt_chan_t chan);
+lwt_chan_t lwt_cgrp_wait (lwt_cgrp_t cgrp);
 
 void lwt_chan_mark_set(lwt_chan_t, void *);
 void *lwt_chan_mark_get(lwt_chan_t);
