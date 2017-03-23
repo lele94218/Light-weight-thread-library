@@ -74,6 +74,7 @@ enum block_status
     BLOCKED_SENDING,
 };
 
+/* attributes of the created thread*/
 enum lwt_flags_t
 {
     LWT_NOJOIN = 1,
@@ -85,6 +86,7 @@ struct _lwt_context
     unsigned int ip, sp;
 };
 
+/* buffer ring of the channel*/
 struct _buffer_ring
 {
     int size;
@@ -92,12 +94,14 @@ struct _buffer_ring
 };
 typedef struct _buffer_ring * buffer_ring;
 
+/* node of the buffer ring*/
 struct br_node
 {
     struct list list_node;
     void * datapr;
 };
 
+/* channel group */
 struct _lwt_cgrp
 {
     struct list_head cgrp;
@@ -125,12 +129,16 @@ struct _lwt_channel
     /* receiver thread */
     struct _lwt_t * receiver;
     
+    /* buffer ring */
     buffer_ring br;
     
+    /* channel group */
     lwt_cgrp_t cgroup;
     
+    /* if there is a event */
     int event;
     
+    /* mark of the channel*/
     void * mark;
 };
 typedef struct _lwt_channel * lwt_chan_t;

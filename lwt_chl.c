@@ -104,6 +104,7 @@ lwt_snd(lwt_chan_t chan, void * data)
         printd("thread %d has send data to channel %d, but no receiver.\n", current_thread->lwt_id, chan->chan_id);
         return -1;
     }
+    // synchronous send
     if ( chan->br->size == 0) {
         current_thread->message_data = data;
         printd("current_thread: %d, channel: %d\n", current_thread->lwt_id, chan->chan_id);
@@ -124,6 +125,7 @@ lwt_snd(lwt_chan_t chan, void * data)
         __lwt_schedule();
         return 0;
     }
+    //asynchronous send
     int size = __get_queue_size(chan->br->br);
     if ( size >= chan->br->size )
     {
@@ -283,6 +285,7 @@ lwt_chan_t lwt_rcv_chan(lwt_chan_t chan)
     return rec;
 }
 
+/* create a channel group */
 lwt_cgrp_t lwt_cgrp (void)
 {
     lwt_cgrp_t cgrp = malloc(sizeof(struct _lwt_cgrp));
@@ -290,6 +293,7 @@ lwt_cgrp_t lwt_cgrp (void)
     return cgrp;
 }
 
+/* add a channel to a channel group */
 int lwt_cgrp_add (lwt_cgrp_t cgrp, lwt_chan_t chan)
 {
     if (chan->cgroup) {
@@ -300,6 +304,7 @@ int lwt_cgrp_add (lwt_cgrp_t cgrp, lwt_chan_t chan)
     return 0;
 }
 
+/* remove a channel from a channel group */
 int lwt_cgrp_rem(lwt_cgrp_t cgrp, lwt_chan_t chan)
 {
     if (chan->event) {
@@ -313,6 +318,7 @@ int lwt_cgrp_rem(lwt_cgrp_t cgrp, lwt_chan_t chan)
     return 0;
 }
 
+/* free a channel group */
 int lwt_cgrp_free (lwt_cgrp_t cgrp){
     lwt_chan_t current = list_head_first(&cgrp->cgrp, struct _lwt_channel, cglist);
     do {
@@ -326,6 +332,7 @@ int lwt_cgrp_free (lwt_cgrp_t cgrp){
     return 0;
 }
 
+/* current thread waits on the channel group*/
 lwt_chan_t lwt_cgrp_wait (lwt_cgrp_t cgrp)
 {
     lwt_chan_t current = list_head_first(&cgrp->cgrp, struct _lwt_channel, cglist);
@@ -353,10 +360,13 @@ lwt_chan_t lwt_cgrp_wait (lwt_cgrp_t cgrp)
     return NULL;
 }
 
+/* set the mark to the channel */
 void lwt_chan_mark_set(lwt_chan_t chan, void * mark)
 {
     chan->mark = mark;
 }
+
+/* get the mark of the channel */
 void *lwt_chan_mark_get(lwt_chan_t chan)
 {
     return chan->mark;
