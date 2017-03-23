@@ -94,7 +94,7 @@ typedef struct _buffer_ring * buffer_ring;
 
 struct br_node
 {
-    struct list bl;
+    struct list list_node;
     void * datapr;
 };
 
