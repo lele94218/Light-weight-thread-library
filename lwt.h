@@ -85,6 +85,19 @@ struct _lwt_context
     unsigned int ip, sp;
 };
 
+struct _buffer_ring
+{
+    int size;
+    struct list_head br;
+};
+typedef struct _buffer_ring * buffer_ring;
+
+struct br_node
+{
+    struct list bl;
+    void * datapr;
+};
+
 
 /* This structure describes a lwt channel */
 struct _lwt_channel
@@ -105,6 +118,8 @@ struct _lwt_channel
     
     /* receiver thread */
     struct _lwt_t * receiver;
+    
+    buffer_ring br;
 };
 typedef struct _lwt_channel * lwt_chan_t;
 

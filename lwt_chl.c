@@ -34,8 +34,10 @@ void __print_a_chan_queue(struct list_head *);
 
 /* initiate a channel */
 static void inline
-__init_chan(lwt_chan_t chan)
+__init_chan(lwt_chan_t chan, int size)
 {
+    chan->br->size = size;
+    list_head_init(&chan->br->br);
     chan->receiver = current_thread;
     chan->snd_cnt = 0;
     chan->chan_id = chan_counter++;
@@ -69,7 +71,7 @@ lwt_chan(int size)
     {
         chan = (lwt_chan_t)malloc(sizeof(struct _lwt_channel));
     }
-    __init_chan(chan);
+    __init_chan(chan, size);
     printd("thread %d has created channel %d.\n", current_thread->lwt_id, chan->chan_id);
     return chan;
 }
