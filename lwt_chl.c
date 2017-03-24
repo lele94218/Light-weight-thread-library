@@ -191,6 +191,7 @@ lwt_rcv(lwt_chan_t chan)
     
     //synchronous receive
     if (chan->br->size == 0) {
+        printd("asynchonous receive \n");
         void * result;
         if (list_head_empty(&(chan->sender_queue)))
         {
@@ -225,6 +226,7 @@ lwt_rcv(lwt_chan_t chan)
     
     
     //asynchronous receive
+    printd("asynchronous receive \n");
     int size = __get_queue_size(chan->br->br);
 
 //    if (list_head_empty(&(chan->sender_queue)))
@@ -242,6 +244,7 @@ lwt_rcv(lwt_chan_t chan)
     printd("thread %d resumed to receive data from channel %d.\n", current_thread->lwt_id, chan->chan_id);
     struct br_node * result;
     result = list_head_first_d(&chan->br->br, struct br_node);
+    list_rem_d(result);
     
     chan->event = 0;
     
@@ -293,6 +296,8 @@ lwt_cgrp_t lwt_cgrp (void)
 {
     lwt_cgrp_t cgrp = malloc(sizeof(struct _lwt_cgrp));
     list_head_init(&cgrp->cgrp);
+    list_head_init(&cgrp->wait_queue);
+    printd("channel group created \n");
     return cgrp;
 }
 
@@ -304,6 +309,7 @@ int lwt_cgrp_add (lwt_cgrp_t cgrp, lwt_chan_t chan)
     }
     list_head_append(&cgrp->cgrp, chan, cglist);
     chan->cgroup = cgrp;
+    printd("channel added to channel group \n");
     return 0;
 }
 
@@ -341,7 +347,7 @@ lwt_chan_t lwt_cgrp_wait (lwt_cgrp_t cgrp)
     if (list_head_empty(&cgrp->cgrp)) {
         return NULL;
     }
-    
+    printd("wait on channel group \n");
     while (1) {
         lwt_chan_t current = list_head_first(&cgrp->cgrp, struct _lwt_channel, cglist);
 
