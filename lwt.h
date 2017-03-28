@@ -74,7 +74,7 @@ enum block_status
     BLOCKED_SENDING,
 };
 
-/* attributes of the created thread*/
+/* attributes of the created thread */
 enum lwt_flags_t
 {
     LWT_NOJOIN = 1,

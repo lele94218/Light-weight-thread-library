@@ -295,6 +295,7 @@ lwt_chan_t lwt_rcv_chan(lwt_chan_t chan)
 lwt_cgrp_t lwt_cgrp (void)
 {
     lwt_cgrp_t cgrp = malloc(sizeof(struct _lwt_cgrp));
+    if (!cgrp) return LWT_NULL;
     list_head_init(&cgrp->cgrp);
     list_head_init(&cgrp->wait_queue);
     printd("channel group created \n");
