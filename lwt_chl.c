@@ -43,7 +43,8 @@ __init_chan(lwt_chan_t chan, int size)
 //    list_head_init(&chan->br->br);
     chan->size = size;
     chan->buffer.data_buffer = malloc(size * sizeof(uint));
-    chan->buffer.count = chan->buffer.tail = chan->buffer.head = 0;
+    chan->buffer.tail = chan->buffer.head = 0;
+    
     chan->receiver = current_thread;
     chan->snd_cnt = 0;
     chan->chan_id = chan_counter++;
