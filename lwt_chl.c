@@ -38,9 +38,12 @@ int __get_queue_size(struct list_head * input_list);
 static void inline
 __init_chan(lwt_chan_t chan, int size)
 {
-    chan->br = malloc(sizeof(struct _buffer_ring));
-    chan->br->size = size;
-    list_head_init(&chan->br->br);
+//    chan->br = malloc(sizeof(struct _buffer_ring));
+//    chan->br->size = size;
+//    list_head_init(&chan->br->br);
+    chan->size = size;
+    chan->buffer.data_buffer = malloc(size * sizeof(uint));
+    chan->buffer.count = chan->buffer.tail = chan->buffer.head = 0;
     chan->receiver = current_thread;
     chan->snd_cnt = 0;
     chan->chan_id = chan_counter++;
@@ -103,20 +106,11 @@ lwt_chan_deref (lwt_chan_t chan)
 int
 lwt_snd(lwt_chan_t chan, void * data)
 {
-    if (unlikely(chan->receiver == NULL))
+    
+    if (chan->receiver)
     {
-        printd("thread %d has send data to channel %d, but no receiver.\n", current_thread->lwt_id, chan->chan_id);
-        return -1;
-    }
-    /* synchronous send */
-    if (chan->br->size == 0) {
-        current_thread->message_data = data;
-        printd("current_thread: %d, channel: %d\n", current_thread->lwt_id, chan->chan_id);
-        list_rem_d(current_thread);
-        list_head_add_d(&(chan->sender_queue), current_thread);
-        nsnding++;
-        block_counter++;
-        printd("thread %d is waiting for channel %d's receiver thread %d.\n", current_thread->lwt_id, chan->chan_id, chan->receiver->lwt_id);
+        /* someone is waiting */
+        printd("thread %d has send data to channel %d,, and it has recevier.\n", current_thread->lwt_id, chan->chan_id);
         if (chan->receiver->state == LWT_BLOCKED && chan->receiver->block_for == BLOCKED_RECEIVING)
         {
             nrcving--;
@@ -124,57 +118,103 @@ lwt_snd(lwt_chan_t chan, void * data)
             chan->receiver->state = LWT_RUNNABLE;
             list_rem_d(chan->receiver);
             list_head_append_d(&run_queue, chan->receiver);
-            printd("thread %d wake up and ready to receive data from channel %d.\n", chan->receiver->lwt_id, chan->chan_id);
+            printd("thread %d is waiting for channel %d's receiver thread %d.\n", current_thread->lwt_id, chan->chan_id, chan->receiver->lwt_id);
         }
-        __lwt_schedule();
         return 0;
-    }
-    /* asynchronous send */
-    /* br->br?? why don't use br->size??? */
-    int size = __get_queue_size(&(chan->br->br));
-    if (size >= chan->br->size)
-    {
-        list_rem_d(current_thread);
-        list_head_add_d(&(chan->sender_queue), current_thread);
-        nsnding++;
-        block_counter++;
-        current_thread->state = LWT_BLOCKED;
-        current_thread->block_for = BLOCKED_SENDING;
-        __lwt_schedule();
-    }
-    if (size == 0) {
-        chan->event = 1;
-        if (chan->cgroup)
-        {
-            if (!list_head_empty(&chan->cgroup->wait_queue)) {
-                lwt_t waiter = list_head_first_d(&(chan->cgroup->wait_queue), struct _lwt_t);
-                block_counter--;
-                list_rem_d(waiter);
-                waiter->state = LWT_RUNNABLE;
-                list_head_append_d(&run_queue, waiter);
-            }
-        }
         
     }
-    struct br_node * bn = malloc(sizeof(struct br_node));
-    bn->datapr = data;
-
-    list_head_append_d(&chan->br->br, bn);
-    printd("current_thread: %d, channel: %d\n", current_thread->lwt_id, chan->chan_id);
-    /* Note: Why block it? */
-//    current_thread->state = LWT_BLOCKED;
-//    current_thread->block_for = BLOCKED_SENDING;
-    printd("thread %d is waiting for channel %d's receiver thread %d.\n", current_thread->lwt_id, chan->chan_id, chan->receiver->lwt_id);
-    if (chan->receiver->state == LWT_BLOCKED && chan->receiver->block_for == BLOCKED_RECEIVING)
-    {
-        nrcving--;
-        block_counter--;
-        chan->receiver->state = LWT_RUNNABLE;
-        list_rem_d(chan->receiver);
-        list_head_append_d(&run_queue, chan->receiver);
-        printd("thread %d wake up and ready to receive data from channel %d.\n", chan->receiver->lwt_id, chan->chan_id);
+    
+    if (chan->buffer.head != chan->buffer.tail && chan->buffer.count < chan->size) {
+        /* buffer has space */
+        ((uint *)(chan->buffer.data_buffer))[chan->buffer.head++ % chan->size] = (uint)data;
+        return 0;
     }
+    
+    /* buffer doesn't have space */
+    current_thread->message_data = data;
+    printd("current_thread: %d, channel: %d\n buffer doesn't have space. \n", current_thread->lwt_id, chan->chan_id);
+    list_rem_d(current_thread);
+    list_head_add_d(&(chan->sender_queue), current_thread);
+    nsnding++;
+    block_counter++;
+    
+    __lwt_schedule();
     return 0;
+    
+    
+    
+//    if (unlikely(chan->receiver == NULL))
+//    {
+//        printd("thread %d has send data to channel %d, but no receiver.\n", current_thread->lwt_id, chan->chan_id);
+//        return -1;
+//    }
+//    /* synchronous send */
+//    if (chan->br->size == 0) {
+//        current_thread->message_data = data;
+//        printd("current_thread: %d, channel: %d\n", current_thread->lwt_id, chan->chan_id);
+//        list_rem_d(current_thread);
+//        list_head_add_d(&(chan->sender_queue), current_thread);
+//        nsnding++;
+//        block_counter++;
+//        printd("thread %d is waiting for channel %d's receiver thread %d.\n", current_thread->lwt_id, chan->chan_id, chan->receiver->lwt_id);
+//        if (chan->receiver->state == LWT_BLOCKED && chan->receiver->block_for == BLOCKED_RECEIVING)
+//        {
+//            nrcving--;
+//            block_counter--;
+//            chan->receiver->state = LWT_RUNNABLE;
+//            list_rem_d(chan->receiver);
+//            list_head_append_d(&run_queue, chan->receiver);
+//            printd("thread %d wake up and ready to receive data from channel %d.\n", chan->receiver->lwt_id, chan->chan_id);
+//        }
+//        __lwt_schedule();
+//        return 0;
+//    }
+//    /* asynchronous send */
+//    /* br->br?? why don't use br->size??? */
+//    int size = __get_queue_size(&(chan->br->br));
+//    if (size >= chan->br->size)
+//    {
+//        list_rem_d(current_thread);
+//        list_head_add_d(&(chan->sender_queue), current_thread);
+//        nsnding++;
+//        block_counter++;
+//        current_thread->state = LWT_BLOCKED;
+//        current_thread->block_for = BLOCKED_SENDING;
+//        __lwt_schedule();
+//    }
+//    if (size == 0) {
+//        chan->event = 1;
+//        if (chan->cgroup)
+//        {
+//            if (!list_head_empty(&chan->cgroup->wait_queue)) {
+//                lwt_t waiter = list_head_first_d(&(chan->cgroup->wait_queue), struct _lwt_t);
+//                block_counter--;
+//                list_rem_d(waiter);
+//                waiter->state = LWT_RUNNABLE;
+//                list_head_append_d(&run_queue, waiter);
+//            }
+//        }
+//        
+//    }
+//    struct br_node * bn = malloc(sizeof(struct br_node));
+//    bn->datapr = data;
+//
+//    list_head_append_d(&chan->br->br, bn);
+//    printd("current_thread: %d, channel: %d\n", current_thread->lwt_id, chan->chan_id);
+//    /* Note: Why block it? */
+////    current_thread->state = LWT_BLOCKED;
+////    current_thread->block_for = BLOCKED_SENDING;
+//    printd("thread %d is waiting for channel %d's receiver thread %d.\n", current_thread->lwt_id, chan->chan_id, chan->receiver->lwt_id);
+//    if (chan->receiver->state == LWT_BLOCKED && chan->receiver->block_for == BLOCKED_RECEIVING)
+//    {
+//        nrcving--;
+//        block_counter--;
+//        chan->receiver->state = LWT_RUNNABLE;
+//        list_rem_d(chan->receiver);
+//        list_head_append_d(&run_queue, chan->receiver);
+//        printd("thread %d wake up and ready to receive data from channel %d.\n", chan->receiver->lwt_id, chan->chan_id);
+//    }
+//    return 0;
 }
 
 /* receive data from a channel, if no sender queueing, block the thread and wait till data sent by the sender */
@@ -297,7 +337,7 @@ lwt_cgrp (void)
 {
     lwt_cgrp_t cgrp = malloc(sizeof(struct _lwt_cgrp));
     if (!cgrp) return LWT_NULL;
-    list_head_init(&cgrp->cgrp);
+    list_head_init(&cgrp->chl_list);
     list_head_init(&cgrp->wait_queue);
     printd("channel group created \n");
     return cgrp;
@@ -311,7 +351,7 @@ lwt_cgrp_add (lwt_cgrp_t cgrp, lwt_chan_t chan)
     {
         return -1;
     }
-    list_head_append(&cgrp->cgrp, chan, cglist);
+    list_head_append(&cgrp->chl_list, chan, cglist);
     chan->cgroup = cgrp;
     printd("channel added to channel group \n");
     return 0;
@@ -321,7 +361,7 @@ lwt_cgrp_add (lwt_cgrp_t cgrp, lwt_chan_t chan)
 int
 lwt_cgrp_rem(lwt_cgrp_t cgrp, lwt_chan_t chan)
 {
-    if (chan->event)
+    if (chan->ready)
     {
         return 1;
     }
@@ -349,9 +389,9 @@ lwt_cgrp_free (lwt_cgrp_t cgrp)
 //    while (current != list_head_last(&cgrp->cgrp, struct _lwt_channel, cglist));
     lwt_chan_t node = NULL;
     
-    list_foreach(&cgrp->cgrp, node, cglist)
+    list_foreach(&cgrp->chl_list, node, cglist)
     {
-        if (node->event == 1)
+        if (node->ready == 1)
             return -1;
     }
     free(cgrp);
@@ -362,7 +402,7 @@ lwt_cgrp_free (lwt_cgrp_t cgrp)
 lwt_chan_t
 lwt_cgrp_wait (lwt_cgrp_t cgrp)
 {
-    if (list_head_empty(&cgrp->cgrp)) {
+    if (list_head_empty(&cgrp->chl_list)) {
         return NULL;
     }
     printd("wait on channel group \n");
@@ -379,9 +419,9 @@ lwt_cgrp_wait (lwt_cgrp_t cgrp)
 //        while (current != list_head_last(&cgrp->cgrp, struct _lwt_channel, cglist));
         lwt_chan_t node = NULL;
         
-        list_foreach(&cgrp->cgrp, node, cglist)
+        list_foreach(&cgrp->chl_list, node, cglist)
         {
-            if (node->event == 1)
+            if (node->ready == 1)
                 return node;
         }
         /* need block current thread */
