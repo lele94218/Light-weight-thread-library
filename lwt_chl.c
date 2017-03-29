@@ -244,7 +244,7 @@ lwt_rcv(lwt_chan_t chan)
             nsnding--;
             block_counter--;
             list_rem_d(sender);
-            ((uint *)(chan->buffer.data_buffer))[(chan->buffer.tail++) % chan->size]=(uint *)sender->message_data;
+            ((uint *)(chan->buffer.data_buffer))[(chan->buffer.tail++) % chan->size] = (uint)(sender->message_data);
             if (sender->state != LWT_ZOMBIES)
             {
                 printd("runing \n");
@@ -259,8 +259,8 @@ lwt_rcv(lwt_chan_t chan)
     /* receive data from sender queue */
     if (!list_head_empty(&(chan->sender_queue)))
     {
-        result = sender->message_data;
         lwt_t sender = list_head_first_d(&(chan->sender_queue), struct _lwt_t);
+        result = sender->message_data;
         nsnding--;
         block_counter--;
         list_rem_d(sender);
