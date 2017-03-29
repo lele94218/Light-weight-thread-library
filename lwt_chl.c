@@ -181,13 +181,69 @@ lwt_snd(lwt_chan_t chan, void * data)
 void *
 lwt_rcv(lwt_chan_t chan)
 {
+    void * result;
     if (chan->snd_cnt == 0)
     {
         printd("thread %d is receiving from channel %d with no sender.\n", current_thread->lwt_id, chan->chan_id);
         return NULL;
     }
+
+    /* receive data from buffer */
+    if (chan->buffer.tail - chan->buffer.head != 0)
+    {
+        result = (void *) (((uint *)(chan->buffer.data_buffer))[(chan->buffer.head++) % chan->size]);
+        /* sender queue not empty, free one, move its data to buffer */
+        if (!list_head_empty(&(chan->sender_queue)))
+        {
+            lwt_t sender = list_head_first_d(&(chan->sender_queue), struct _lwt_t);
+            nsnding--;
+            block_counter--;
+            list_rem_d(sender);
+            ((uint *)(chan->buffer.data_buffer))[(chan->buffer.tail++) % chan->size]=(uint *)sender->message_data;
+            if (sender->state != LWT_ZOMBIES)
+            {
+                printd("runing \n");
+                sender->state = LWT_RUNNABLE;
+                list_head_append_d(&run_queue, sender);
+            }
+            else list_head_append_d(&recycle_queue, sender);
+        }
+        return result;
+    }
+
+    /* receive data from sender queue */
+    if (!list_head_empty(&(chan->sender_queue)))
+    {
+        result = sender->message_data;
+        lwt_t sender = list_head_first_d(&(chan->sender_queue), struct _lwt_t);
+        nsnding--;
+        block_counter--;
+        list_rem_d(sender);
+        if (sender->state != LWT_ZOMBIES)
+        {
+            printd("runing \n");
+            sender->state = LWT_RUNNABLE;
+            list_head_append_d(&run_queue, sender);
+        }
+        else list_head_append_d(&recycle_queue, sender);
+        return result;
+    }
     
-    /* synchronous receive */
+    /* block it self */
+    current_thread->state = LWT_BLOCKED;
+    current_thread->block_for = BLOCKED_RECEIVING;
+    list_rem_d(current_thread);
+    block_counter++;
+    nrcving++;
+    __lwt_schedule();
+    return current_thread->message_data;
+}
+
+
+
+
+
+    /* synchronous receive 
     if (chan->br->size == 0) {
         printd("asynchonous receive \n");
         void * result;
@@ -197,7 +253,6 @@ lwt_rcv(lwt_chan_t chan)
             current_thread->state = LWT_BLOCKED;
             current_thread->block_for = BLOCKED_RECEIVING;
             list_rem_d(current_thread);
-            //        list_head_add_d(&block_queue, current_thread);
             block_counter++;
             nrcving++;
             __lwt_schedule();
@@ -208,6 +263,7 @@ lwt_rcv(lwt_chan_t chan)
         block_counter--;
         result = sender->message_data;
         list_rem_d(sender);
+
         printd("thread %d is the sender in channel %d \n", sender->lwt_id, chan->chan_id);
         if (sender->state != LWT_ZOMBIES)
         {
@@ -219,7 +275,7 @@ lwt_rcv(lwt_chan_t chan)
         {
             printd("zombie \n");
         }
-        return result;
+        return current_thread->message_data;
     }
     
     
@@ -264,13 +320,14 @@ lwt_rcv(lwt_chan_t chan)
         }
         else
         {
-            /* Note: the sender thread is already in the ``zombie queue'' (which doesn't exist) */
             printd("zombie \n");
             //        list_head_append_d(&, sender);
         }
     }
     return result->datapr;
 }
+*/
+
 
 /* send a channel through a channel */
 int
