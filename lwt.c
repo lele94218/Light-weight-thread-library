@@ -62,29 +62,29 @@ __lwt_dispatch(struct _lwt_context * curr, struct _lwt_context * next)
 {
     __asm__ __volatile__
     (
-//        "push %%ebx;"
-//        "push %%edi;"
-//        "push %%esi;"
-//        "push %%ebp;"
-//        "push %%eax;"
-        "pushal;"
-        "movl %%esp,%0;"
-        "movl $retDispatch%=,%1;"
-        "movl %2,%%esp;"
-        "jmp *%3;"
-        "retDispatch%=:;"
-        "popal;"
-//        "pop %%eax;"
-//        "pop %%ebp;"
-//        "pop %%esi;"
-//        "pop %%edi;"
-//        "pop %%ebx;"
-        : "=m" (curr->sp),"=m" (curr->ip)
-        : "m" (next->sp),"m" (next->ip)
-        : "cc", "memory"
-//        : "ebx", "edi", "esi", "ebp", "eax", "memory"
+     //        "push %%ebx;"
+     //        "push %%edi;"
+     //        "push %%esi;"
+     //        "push %%ebp;"
+     //        "push %%eax;"
+     "pushal;"
+     "movl %%esp,%0;"
+     "movl $retDispatch%=,%1;"
+     "movl %2,%%esp;"
+     "jmp *%3;"
+     "retDispatch%=:;"
+     "popal;"
+     //        "pop %%eax;"
+     //        "pop %%ebp;"
+     //        "pop %%esi;"
+     //        "pop %%edi;"
+     //        "pop %%ebx;"
+     : "=m" (curr->sp),"=m" (curr->ip)
+     : "m" (next->sp),"m" (next->ip)
+     : "cc", "memory"
+     //        : "ebx", "edi", "esi", "ebp", "eax", "memory"
      
-    );
+     );
 }
 
 /* find one runnable thread and execute it */
@@ -103,13 +103,13 @@ __lwt_schedule ()
 void
 __initiate()
 {
-
+    
     /* initialize run_queue */
     list_head_init(&run_queue);
-
+    
     /* initialize recycle queue */
     list_head_init(&recycle_queue);
-
+    
     
     /* initialize working channel queue */
     list_head_init(&chan_working);
@@ -121,10 +121,10 @@ __initiate()
     current_thread = (lwt_t) malloc (sizeof(struct _lwt_t));
     __init_thread(current_thread);
     current_thread->state = LWT_RUNNING;
-
+    
     list_head_append_d(&run_queue, current_thread);
     printd("initialization complete\n");
-
+    
 }
 
 /* create a thread, return its lwt_t pointer */
@@ -133,7 +133,7 @@ lwt_create(lwt_fn_t fn, void * data, lwt_flags_t flags)
 {
     lwt_t next_thread;
     uint _sp;
-
+    
     if (unlikely(!list_head_empty(&recycle_queue))) {
         /* recycle queue is not empty */
         next_thread = list_head_first_d(&recycle_queue, struct _lwt_t);
@@ -148,29 +148,29 @@ lwt_create(lwt_fn_t fn, void * data, lwt_flags_t flags)
         _sp += MAX_STACK_SIZE;
         next_thread->init_sp = _sp;
     }
-
+    
     /* Init other data */
     __init_thread(next_thread);
-
-
+    
+    
     /* Init funciton info */
     _sp -= (sizeof(uint));
     *((uint *)_sp) = (uint)data;
     _sp -= (sizeof(uint));
     *((uint *)_sp) = (uint)fn;
     _sp -= (sizeof(uint));
-
+    
     next_thread->context.sp = _sp;
     next_thread->context.ip = (uint) __lwt_trampoline;
     
     if (flags & LWT_NOJOIN) {
         next_thread->nojoin = 1;
     }
-
+    
     printd("thread: %d has created thread: %d\n", current_thread->lwt_id, next_thread->lwt_id);
-
+    
     list_head_add_d(&run_queue, next_thread);
-
+    
     return next_thread;
 }
 
@@ -179,46 +179,19 @@ void
 lwt_die(void * message)
 {
     printd("die function start executing for thread %d.\n", current_thread->lwt_id);
-
+    
     current_thread->message_data = message;
-
-//    /* if someone is waiting to join this one, return and go to recycle queue */
-//    if (unlikely((long int)current_thread->parent))
-//    {
-//        current_thread->parent->state = LWT_RUNNABLE;
-//        current_thread->parent->last_word = message;
-//        
-//        block_counter--;
-//
-//        list_rem_d(current_thread->parent);
-//        list_head_add_d(&run_queue, current_thread->parent);
-//
-//        current_thread->state = LWT_ZOMBIES;
-//        
-//        list_rem_d(current_thread);
-//        list_head_add_d(&recycle_queue, current_thread);
-//
-//        printd("removed dead thread %d to recycle queue\n", current_thread->lwt_id);
-//    }
-//    /* nobody is currently waiting to join this one, becomes a zombie */
-//    else
-//    {
-//        current_thread->state = LWT_ZOMBIES;
-//        list_rem_d(current_thread);
-////        list_head_add_d(&zombie_queue, current_thread);
-//        zombie_counter++;
-//        printd("removed dead thread %d to zombie queue\n", current_thread->lwt_id);
-//    }
+    
     
     if (unlikely((long int)current_thread->parent))
     {
-         lwt_snd(current_thread->chl, message);
- 
-       current_thread->state = LWT_ZOMBIES;
+        lwt_snd(current_thread->chl, message);
+        
+        current_thread->state = LWT_ZOMBIES;
         
         list_rem_d(current_thread);
         list_head_add_d(&recycle_queue, current_thread);
-       
+        
         printd("removed dead thread %d to recycle queue\n", current_thread->lwt_id);
         
     }
@@ -259,13 +232,13 @@ lwt_yield(lwt_t yield_to)
         list_rem_d(yield_to);
         list_head_append_d(&run_queue, yield_to);
     }
-
+    
     list_rem_d(current_thread);
     if (current_thread->state == LWT_RUNNABLE || current_thread->state == LWT_RUNNING)
-    	list_head_add_d(&run_queue, current_thread);
-
+        list_head_add_d(&run_queue, current_thread);
+    
     __lwt_schedule();
-
+    
     return 0;
 }
 
@@ -273,7 +246,7 @@ lwt_yield(lwt_t yield_to)
 void *
 lwt_join(lwt_t thread_to_wait)
 {
-
+    
     if(!thread_to_wait || thread_to_wait == current_thread || thread_to_wait->parent || thread_to_wait->nojoin)
     {
         printd("error: thread to wait is NULL or itself or nobody waits it\n");
@@ -285,7 +258,7 @@ lwt_join(lwt_t thread_to_wait)
         list_rem_d(thread_to_wait);
         zombie_counter--;
         list_head_add_d(&recycle_queue, thread_to_wait);
-
+        
         return thread_to_wait->message_data;
     }
     
