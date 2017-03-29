@@ -11,7 +11,6 @@ extern struct list_head recycle_queue;
 extern void __lwt_schedule();
 
 
-
 /* two channel queues, one for working channel, one for dead channel */
 struct list_head chan_working;
 struct list_head chan_dead;
@@ -28,6 +27,9 @@ int block_counter = 0;
 /* --------------- Thread communication function implementation, channelling --------------- */
 
 void __print_a_chan_queue(struct list_head *);
+
+/* --------------- Internal function declaration --------------- */
+int __get_queue_size(struct list_head * input_list);
 
 /* --------------- initialization function --------------- */
 
@@ -129,7 +131,7 @@ lwt_snd(lwt_chan_t chan, void * data)
     }
     /* asynchronous send */
     /* br->br?? why don't use br->size??? */
-    int size = __get_queue_size(chan->br->br);
+    int size = __get_queue_size(&(chan->br->br));
     if (size >= chan->br->size)
     {
         list_rem_d(current_thread);
@@ -223,7 +225,7 @@ lwt_rcv(lwt_chan_t chan)
     
     //asynchronous receive
     printd("asynchronous receive \n");
-    int size = __get_queue_size(chan->br->br);
+    int size = __get_queue_size(&(chan->br->br));
 
 //    if (list_head_empty(&(chan->sender_queue)))
     if (size == 0)
