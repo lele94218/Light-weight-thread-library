@@ -106,27 +106,32 @@ lwt_chan_deref (lwt_chan_t chan)
 int
 lwt_snd(lwt_chan_t chan, void * data)
 {
+    if (unlikely(chan->receiver == NULL))
+    {
+        printd("thread %d has send data to channel %d, but no receiver.\n", current_thread->lwt_id, chan->chan_id);
+        return -1;
+    }
     
-    if (chan->receiver)
+    if (chan->receiver->state == LWT_BLOCKED && chan->receiver->block_for == BLOCKED_RECEIVING)
     {
         /* someone is waiting */
-        printd("thread %d has send data to channel %d,, and it has recevier.\n", current_thread->lwt_id, chan->chan_id);
-        if (chan->receiver->state == LWT_BLOCKED && chan->receiver->block_for == BLOCKED_RECEIVING)
-        {
-            nrcving--;
-            block_counter--;
-            chan->receiver->state = LWT_RUNNABLE;
-            list_rem_d(chan->receiver);
-            list_head_append_d(&run_queue, chan->receiver);
-            printd("thread %d is waiting for channel %d's receiver thread %d.\n", current_thread->lwt_id, chan->chan_id, chan->receiver->lwt_id);
-        }
+        current_thread->message_data = data;
+        printd("thread %d has send data to channel %d and it has recevier.\n", current_thread->lwt_id, chan->chan_id);
+        
+        nrcving--;
+        block_counter--;
+        chan->receiver->state = LWT_RUNNABLE;
+        list_rem_d(chan->receiver);
+        list_head_append_d(&run_queue, chan->receiver);
+        printd("thread %d is waiting for channel %d's receiver thread %d.\n", current_thread->lwt_id, chan->chan_id, chan->receiver->lwt_id);
+        
         return 0;
         
     }
     
-    if (chan->buffer.head != chan->buffer.tail && chan->buffer.count < chan->size) {
+    if (chan->buffer.tail - chan->buffer.head != chan->size) {
         /* buffer has space */
-        ((uint *)(chan->buffer.data_buffer))[chan->buffer.head++ % chan->size] = (uint)data;
+        ((uint *)(chan->buffer.data_buffer))[chan->buffer.tail++ % chan->size] = (uint)data;
         return 0;
     }
     
