@@ -67,6 +67,8 @@ list_head_empty(struct list_head * lh)
 #define list_obj_get(l, o, lname) \
     container(l, __typeof__(*(o)), lname)
 
+#define list_is_head(lh, o, lname)   (list_obj_get((lh), (o), lname) == (o))
+
 /* functions for if we don't use the default name for the list field */
 #define list_singleton(o, lname)        list_ll_empty(&(o)->lname)
 #define list_init(o, lname)             list_ll_init(&(o)->lname)
@@ -108,11 +110,11 @@ list_head_empty(struct list_head * lh)
  */
 
 /* Iteration without mutating the list */
-#define ps_list_foreach(head, iter, lname)              \
-    for (iter = ps_list_head_first((head), __typeof__(*iter), lname); \
-         !ps_list_is_head((head), iter, lname);         \
-         (iter) = ps_list_next(iter, lname))
+#define list_foreach(head, iter, lname)              \
+    for (iter = list_head_first((head), __typeof__(*iter), lname); \
+         !list_is_head((head), iter, lname);         \
+         (iter) = list_next(iter, lname))
 
-#define ps_list_foreach_d(head, iter) ps_list_foreach(head, iter, PS_LIST_DEF_NAME)
+#define list_foreach_d(head, iter) list_foreach(head, iter, LIST_DEF_NAME)
 
 #endif
