@@ -262,6 +262,7 @@ lwt_rcv(lwt_chan_t chan)
     {
         lwt_t sender = list_head_first_d(&(chan->sender_queue), struct _lwt_t);
         result = sender->message_data;
+        printd("thread %d is receiving data %d from channel %d.\n", current_thread->lwt_id, result, chan->chan_id);
         nsnding--;
         block_counter--;
         list_rem_d(sender);
