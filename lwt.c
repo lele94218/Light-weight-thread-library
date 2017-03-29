@@ -212,12 +212,13 @@ lwt_die(void * message)
     
     if (unlikely((long int)current_thread->parent))
     {
-        lwt_snd(current_thread->chl, message);
-        current_thread->state = LWT_ZOMBIES;
+         lwt_snd(current_thread->chl, message);
+ 
+       current_thread->state = LWT_ZOMBIES;
         
         list_rem_d(current_thread);
         list_head_add_d(&recycle_queue, current_thread);
-        
+       
         printd("removed dead thread %d to recycle queue\n", current_thread->lwt_id);
         
     }
@@ -247,7 +248,7 @@ int
 lwt_yield(lwt_t yield_to)
 {
     /* yield to itself */
-    if (yield_to == current_thread || (yield_to && yield_to->state != LWT_RUNNABLE))
+    if (yield_to == current_thread || (yield_to && yield_to->state != LWT_RUNNABLE && yield_to->state != LWT_RUNNING))
     {
         printd("thread %d is yielding to itself or it is not runable\n",current_thread->lwt_id);
         return 0;
@@ -258,8 +259,10 @@ lwt_yield(lwt_t yield_to)
         list_rem_d(yield_to);
         list_head_append_d(&run_queue, yield_to);
     }
+
     list_rem_d(current_thread);
-    list_head_add_d(&run_queue, current_thread);
+    if (current_thread->state == LWT_RUNNABLE || current_thread->state == LWT_RUNNING)
+    	list_head_add_d(&run_queue, current_thread);
 
     __lwt_schedule();
 

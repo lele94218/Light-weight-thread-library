@@ -122,6 +122,7 @@ lwt_snd(lwt_chan_t chan, void * data)
         nrcving--;
         block_counter--;
         chan->receiver->state = LWT_RUNNABLE;
+	list_rem_d(chan->receiver);
         list_head_append_d(&run_queue, chan->receiver);
         printd("thread %d is waiting for channel %d's receiver thread %d.\n", current_thread->lwt_id, chan->chan_id, chan->receiver->lwt_id);
         
@@ -244,13 +245,14 @@ lwt_rcv(lwt_chan_t chan)
             block_counter--;
             list_rem_d(sender);
             ((uint *)(chan->buffer.data_buffer))[(chan->buffer.tail++) % chan->size] = (uint)(sender->message_data);
-            if (sender->state != LWT_ZOMBIES)
+            /*if (sender->state != LWT_ZOMBIES)
             {
                 printd("runing \n");
                 sender->state = LWT_RUNNABLE;
                 list_head_append_d(&run_queue, sender);
             }
             else list_head_append_d(&recycle_queue, sender);
+	    */
         }
         return result;
     }
@@ -264,14 +266,15 @@ lwt_rcv(lwt_chan_t chan)
         nsnding--;
         block_counter--;
         list_rem_d(sender);
-        if (sender->state != LWT_ZOMBIES)
+        /*if (sender->state != LWT_ZOMBIES)
         {
             printd("runing \n");
             sender->state = LWT_RUNNABLE;
             list_head_append_d(&run_queue, sender);
         }
         else list_head_append_d(&recycle_queue, sender);
-        return result;
+        */
+	return result;
     }
     
     /* block it self */
