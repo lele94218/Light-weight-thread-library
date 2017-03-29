@@ -93,7 +93,7 @@ struct _buffer_ring
 /* channel group */
 struct _lwt_cgrp
 {
-    struct list_head cgrp;
+    struct list_head chl_list;
     struct list_head wait_queue;
 };
 typedef struct _lwt_cgrp * lwt_cgrp_t;
