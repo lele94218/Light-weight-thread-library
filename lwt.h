@@ -20,6 +20,9 @@
 #define likely(x)   __builtin_expect((x),1)
 #define unlikely(x) __builtin_expect((x),0)
 
+/* attributes of the created thread */
+#define LWT_NOJOIN 1
+
 /* Data type redefinition */
 typedef unsigned int uint;
 typedef unsigned short ushort;
@@ -54,11 +57,11 @@ enum lwt_info_t
 enum lwt_status
 {
     /* The thread is running. */
-    LWT_STATUS_RUNNABLE = 0,
+    LWT_RUNNABLE = 0,
     /* The thread is blocked. */
-    LWT_STATUS_BLOCKED,
+    LWT_BLOCKED,
     /* This is a zombie thread. */
-    LWT_STATUS_ZOMBIES,
+    LWT_ZOMBIES,
     /* This thread is currently running. */
     LWT_RUNNING
 };
@@ -74,11 +77,6 @@ enum block_status
     BLOCKED_SENDING,
 };
 
-/* attributes of the created thread */
-enum lwt_flags_t
-{
-    LWT_NOJOIN = 1,
-};
 
 /* define the context of a thread */
 struct _lwt_context
@@ -132,7 +130,7 @@ struct _lwt_channel
     /* buffer ring */
     buffer_ring br;
     
-    /* channel group */
+    /* channel group need??*/
     lwt_cgrp_t cgroup;
     
     /* if there is a event */
@@ -170,13 +168,14 @@ struct _lwt_t
     unsigned int init_sp;
 
     /* return value */
-    void * last_word;
+//    void * last_word;
 
     /* Thread context */
     struct _lwt_context context;
     
     lwt_chan_t chl;
     
+    /* thread join state */
     int nojoin;
 };
 typedef struct _lwt_t * lwt_t;

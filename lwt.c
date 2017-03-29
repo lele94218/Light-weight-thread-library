@@ -44,9 +44,9 @@ static inline void
 __init_thread(lwt_t created_thread)
 {
     created_thread->lwt_id = lwt_counter++;
-    created_thread->state = LWT_STATUS_RUNNABLE;
+    created_thread->state = LWT_RUNNING;
     created_thread->parent = NULL;
-    created_thread->last_word = NULL;
+    created_thread->message_data = NULL;
     created_thread->chl = lwt_chan(0);
     /* NOTE: here snd_cnt is manually changed */
     created_thread->chl->snd_cnt += 1;
@@ -181,12 +181,12 @@ lwt_die(void * message)
 {
     printd("die function start executing for thread %d.\n", current_thread->lwt_id);
 
-    current_thread->last_word = message;
+    current_thread->message_data = message;
 
 //    /* if someone is waiting to join this one, return and go to recycle queue */
 //    if (unlikely((long int)current_thread->parent))
 //    {
-//        current_thread->parent->state = LWT_STATUS_RUNNABLE;
+//        current_thread->parent->state = LWT_RUNNABLE;
 //        current_thread->parent->last_word = message;
 //        
 //        block_counter--;
@@ -194,7 +194,7 @@ lwt_die(void * message)
 //        list_rem_d(current_thread->parent);
 //        list_head_add_d(&run_queue, current_thread->parent);
 //
-//        current_thread->state = LWT_STATUS_ZOMBIES;
+//        current_thread->state = LWT_ZOMBIES;
 //        
 //        list_rem_d(current_thread);
 //        list_head_add_d(&recycle_queue, current_thread);
@@ -204,7 +204,7 @@ lwt_die(void * message)
 //    /* nobody is currently waiting to join this one, becomes a zombie */
 //    else
 //    {
-//        current_thread->state = LWT_STATUS_ZOMBIES;
+//        current_thread->state = LWT_ZOMBIES;
 //        list_rem_d(current_thread);
 ////        list_head_add_d(&zombie_queue, current_thread);
 //        zombie_counter++;
@@ -213,7 +213,7 @@ lwt_die(void * message)
     
     if (unlikely((long int)current_thread->parent))
     {
-        current_thread->state = LWT_STATUS_ZOMBIES;
+        current_thread->state = LWT_ZOMBIES;
         
         list_rem_d(current_thread);
         list_head_add_d(&recycle_queue, current_thread);
@@ -224,7 +224,7 @@ lwt_die(void * message)
     }
     else
     {
-        current_thread->state = LWT_STATUS_ZOMBIES;
+        current_thread->state = LWT_ZOMBIES;
         list_rem_d(current_thread);
         zombie_counter++;
         printd("removed dead thread %d to zombie queue\n", current_thread->lwt_id);
@@ -248,7 +248,7 @@ int
 lwt_yield(lwt_t yield_to)
 {
     /* yield to itself */
-    if (yield_to == current_thread || (yield_to && yield_to->state != LWT_STATUS_RUNNABLE))
+    if (yield_to == current_thread || (yield_to && yield_to->state != LWT_RUNNABLE))
     {
         printd("thread %d is yielding to itself or it is not runable\n",current_thread->lwt_id);
         return 0;
@@ -277,14 +277,14 @@ lwt_join(lwt_t thread_to_wait)
         printd("error: thread to wait is NULL or itself or nobody waits it\n");
         return NULL;
     }
-    if(unlikely(thread_to_wait->state == LWT_STATUS_ZOMBIES))
+    if(unlikely(thread_to_wait->state == LWT_ZOMBIES))
     {
         printd("current thread is collecting a zombie thread\n");
         list_rem_d(thread_to_wait);
         zombie_counter--;
         list_head_add_d(&recycle_queue, thread_to_wait);
 
-        return thread_to_wait->last_word;
+        return thread_to_wait->message_data;
     }
     
     /* update oneside thread */
@@ -292,7 +292,7 @@ lwt_join(lwt_t thread_to_wait)
 //
 //    printd("thread %d blocked, waiting for thread %d to join\n", current_thread->lwt_id, thread_to_wait->lwt_id);
 //
-//    current_thread->state = LWT_STATUS_BLOCKED;
+//    current_thread->state = LWT_BLOCKED;
 //    current_thread->block_for = BLOCKED_JOIN;
 //
 //    /* Move to blocked queue */

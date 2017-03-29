@@ -115,11 +115,11 @@ lwt_snd(lwt_chan_t chan, void * data)
         nsnding++;
         block_counter++;
         printd("thread %d is waiting for channel %d's receiver thread %d.\n", current_thread->lwt_id, chan->chan_id, chan->receiver->lwt_id);
-        if (chan->receiver->state == LWT_STATUS_BLOCKED && chan->receiver->block_for == BLOCKED_RECEIVING)
+        if (chan->receiver->state == LWT_BLOCKED && chan->receiver->block_for == BLOCKED_RECEIVING)
         {
             nrcving--;
             block_counter--;
-            chan->receiver->state = LWT_STATUS_RUNNABLE;
+            chan->receiver->state = LWT_RUNNABLE;
             list_rem_d(chan->receiver);
             list_head_append_d(&run_queue, chan->receiver);
             printd("thread %d wake up and ready to receive data from channel %d.\n", chan->receiver->lwt_id, chan->chan_id);
@@ -136,7 +136,7 @@ lwt_snd(lwt_chan_t chan, void * data)
         list_head_add_d(&(chan->sender_queue), current_thread);
         nsnding++;
         block_counter++;
-        current_thread->state = LWT_STATUS_BLOCKED;
+        current_thread->state = LWT_BLOCKED;
         current_thread->block_for = BLOCKED_SENDING;
         __lwt_schedule();
     }
@@ -148,7 +148,7 @@ lwt_snd(lwt_chan_t chan, void * data)
                 lwt_t waiter = list_head_first_d(&(chan->cgroup->wait_queue), struct _lwt_t);
                 block_counter--;
                 list_rem_d(waiter);
-                waiter->state = LWT_STATUS_RUNNABLE;
+                waiter->state = LWT_RUNNABLE;
                 list_head_append_d(&run_queue, waiter);
             }
         }
@@ -160,14 +160,14 @@ lwt_snd(lwt_chan_t chan, void * data)
     list_head_append_d(&chan->br->br, bn);
     printd("current_thread: %d, channel: %d\n", current_thread->lwt_id, chan->chan_id);
     /* Note: Why block it? */
-//    current_thread->state = LWT_STATUS_BLOCKED;
+//    current_thread->state = LWT_BLOCKED;
 //    current_thread->block_for = BLOCKED_SENDING;
     printd("thread %d is waiting for channel %d's receiver thread %d.\n", current_thread->lwt_id, chan->chan_id, chan->receiver->lwt_id);
-    if (chan->receiver->state == LWT_STATUS_BLOCKED && chan->receiver->block_for == BLOCKED_RECEIVING)
+    if (chan->receiver->state == LWT_BLOCKED && chan->receiver->block_for == BLOCKED_RECEIVING)
     {
         nrcving--;
         block_counter--;
-        chan->receiver->state = LWT_STATUS_RUNNABLE;
+        chan->receiver->state = LWT_RUNNABLE;
         list_rem_d(chan->receiver);
         list_head_append_d(&run_queue, chan->receiver);
         printd("thread %d wake up and ready to receive data from channel %d.\n", chan->receiver->lwt_id, chan->chan_id);
@@ -192,7 +192,7 @@ lwt_rcv(lwt_chan_t chan)
         if (list_head_empty(&(chan->sender_queue)))
         {
             printd("thread %d is receiving channel %d, no sender yet.\n", current_thread->lwt_id, chan->chan_id);
-            current_thread->state = LWT_STATUS_BLOCKED;
+            current_thread->state = LWT_BLOCKED;
             current_thread->block_for = BLOCKED_RECEIVING;
             list_rem_d(current_thread);
             //        list_head_add_d(&block_queue, current_thread);
@@ -207,10 +207,10 @@ lwt_rcv(lwt_chan_t chan)
         result = sender->message_data;
         list_rem_d(sender);
         printd("thread %d is the sender in channel %d \n", sender->lwt_id, chan->chan_id);
-        if (sender->state != LWT_STATUS_ZOMBIES)
+        if (sender->state != LWT_ZOMBIES)
         {
                 printd("runing \n");
-                sender->state = LWT_STATUS_RUNNABLE;
+                sender->state = LWT_RUNNABLE;
                 list_head_append_d(&run_queue, sender);
         }
         else
@@ -229,7 +229,7 @@ lwt_rcv(lwt_chan_t chan)
     if (size == 0)
     {
         printd("thread %d is receiving channel %d, no sender yet.\n", current_thread->lwt_id, chan->chan_id);
-        current_thread->state = LWT_STATUS_BLOCKED;
+        current_thread->state = LWT_BLOCKED;
         current_thread->block_for = BLOCKED_RECEIVING;
         list_rem_d(current_thread);
         //        list_head_add_d(&block_queue, current_thread);
@@ -254,10 +254,10 @@ lwt_rcv(lwt_chan_t chan)
     
         list_rem_d(sender);
         printd("thread %d is the sender in channel %d \n", sender->lwt_id, chan->chan_id);
-        if (sender->state != LWT_STATUS_ZOMBIES)
+        if (sender->state != LWT_ZOMBIES)
         {
             printd("runing \n");
-            sender->state = LWT_STATUS_RUNNABLE;
+            sender->state = LWT_RUNNABLE;
             list_head_append_d(&run_queue, sender);
         }
         else
@@ -383,7 +383,7 @@ lwt_cgrp_wait (lwt_cgrp_t cgrp)
                 return node;
         }
         /* need block current thread */
-        current_thread->state = LWT_STATUS_BLOCKED;
+        current_thread->state = LWT_BLOCKED;
         list_rem_d(current_thread);
         //        list_head_add_d(&block_queue, current_thread);
         list_head_add_d(&cgrp->wait_queue, current_thread);
