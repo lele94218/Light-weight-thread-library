@@ -33,8 +33,6 @@ void __lwt_schedule (void);
 void * __lwt_trampoline(lwt_fn_t, void *);
 void __initiate(void);
 void __print_a_thread_queue(struct list_head *);
-int __get_queue_size(struct list_head *);
-//int __get_blocked_queue_size(enum block_status);
 
 
 /* --------------- inline function definition --------------- */
@@ -96,7 +94,7 @@ __lwt_schedule ()
     old_thread = current_thread;
     current_thread = list_head_first_d(&run_queue, struct _lwt_t);
     printd("thread %d start executing from reschedule\n", current_thread->lwt_id);
-    current_thread->state = LWT_RUNNING;
+    current_thread->state = LWT_STATUS_RUNNING;
     __lwt_dispatch(&(old_thread->context), &(current_thread->context));
 }
 
@@ -122,6 +120,7 @@ __initiate()
     
     current_thread = (lwt_t) malloc (sizeof(struct _lwt_t));
     __init_thread(current_thread);
+    current_thread->state = LWT_STATUS_RUNNING;
 
     list_head_append_d(&run_queue, current_thread);
     printd("initialization complete\n");
@@ -289,22 +288,6 @@ lwt_join(lwt_t thread_to_wait)
     
     /* update oneside thread */
     thread_to_wait->parent = current_thread;
-//
-//    printd("thread %d blocked, waiting for thread %d to join\n", current_thread->lwt_id, thread_to_wait->lwt_id);
-//
-//    current_thread->state = LWT_STATUS_BLOCKED;
-//    current_thread->block_for = BLOCKED_JOIN;
-//
-//    /* Move to blocked queue */
-//    list_rem_d(current_thread);
-////    list_head_add_d(&block_queue, current_thread);
-//    
-//    block_counter++;
-//    __lwt_schedule();
-//
-//    printd("thread %d picked up dead threads %d's last word %d\n", current_thread->lwt_id, thread_to_wait->lwt_id, (int)current_thread->last_word);
-//
-//    return current_thread->last_word;
     return lwt_rcv(thread_to_wait->chl);
     
     
