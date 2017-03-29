@@ -66,6 +66,9 @@ test_perf(void)
 	chld2 = lwt_create(fn_bounce, NULL, 0);
 	lwt_join(chld1);
 	lwt_join(chld2);
+	print_queue_content(LWT_INFO_NTHD_RUNNABLE);
+	print_queue_content(LWT_INFO_NTHD_RECYCLE);
+	
 	IS_RESET();
 }
 

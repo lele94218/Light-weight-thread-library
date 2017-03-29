@@ -116,13 +116,12 @@ lwt_snd(lwt_chan_t chan, void * data)
     if (chan->receiver->state == LWT_BLOCKED && chan->receiver->block_for == BLOCKED_RECEIVING)
     {
         /* someone is waiting */
-        current_thread->message_data = data;
+        chan->receiver->message_data = data;
         printd("thread %d has send data to channel %d and it has recevier.\n", current_thread->lwt_id, chan->chan_id);
         
         nrcving--;
         block_counter--;
         chan->receiver->state = LWT_RUNNABLE;
-        list_rem_d(chan->receiver);
         list_head_append_d(&run_queue, chan->receiver);
         printd("thread %d is waiting for channel %d's receiver thread %d.\n", current_thread->lwt_id, chan->chan_id, chan->receiver->lwt_id);
         
@@ -143,8 +142,7 @@ lwt_snd(lwt_chan_t chan, void * data)
     list_head_add_d(&(chan->sender_queue), current_thread);
     nsnding++;
     block_counter++;
-    
-    __lwt_schedule();
+    lwt_yield(NULL); 
     return 0;
     
     
@@ -262,7 +260,7 @@ lwt_rcv(lwt_chan_t chan)
     {
         lwt_t sender = list_head_first_d(&(chan->sender_queue), struct _lwt_t);
         result = sender->message_data;
-        printd("thread %d is receiving data %d from channel %d.\n", current_thread->lwt_id, result, chan->chan_id);
+        printd("thread %d is receiving data %d from channel %d.\n", current_thread->lwt_id, (int)result, chan->chan_id);
         nsnding--;
         block_counter--;
         list_rem_d(sender);
@@ -282,7 +280,7 @@ lwt_rcv(lwt_chan_t chan)
     list_rem_d(current_thread);
     block_counter++;
     nrcving++;
-    __lwt_schedule();
+    lwt_yield(NULL);
     return current_thread->message_data;
 }
 

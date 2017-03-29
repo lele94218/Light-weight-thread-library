@@ -212,6 +212,7 @@ lwt_die(void * message)
     
     if (unlikely((long int)current_thread->parent))
     {
+        lwt_snd(current_thread->chl, message);
         current_thread->state = LWT_ZOMBIES;
         
         list_rem_d(current_thread);
@@ -219,7 +220,6 @@ lwt_die(void * message)
         
         printd("removed dead thread %d to recycle queue\n", current_thread->lwt_id);
         
-        lwt_snd(current_thread->chl, message);
     }
     else
     {
