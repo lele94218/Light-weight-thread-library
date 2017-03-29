@@ -6,7 +6,7 @@
 
 #define rdtscll(val) __asm__ __volatile__("rdtsc" : "=A" (val))
 
-#define ITER 2
+#define ITER 10000
 
 /* 
  * My output on an Intel Core i5-2520M CPU @ 2.50GHz:
@@ -180,6 +180,7 @@ fn_chan(lwt_chan_t to)
 	
 	from = lwt_chan(0);
 	lwt_snd_chan(to, from);
+	lwt_yield(NULL);
 	assert(from->snd_cnt);
 	for (i = 0 ; i < ITER ; i++) {
 		lwt_snd(to, (void*)1);

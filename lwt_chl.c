@@ -382,6 +382,8 @@ int
 lwt_snd_chan(lwt_chan_t through, lwt_chan_t sending)
 {
     int return_value = lwt_snd(through, (void *) sending);
+    /* in case the reciever thread is blocked. */
+    lwt_yield(NULL);
     return return_value;
 }
 
