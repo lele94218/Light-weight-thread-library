@@ -29,6 +29,7 @@ typedef unsigned short ushort;
 typedef unsigned char uchar;
 typedef int t_id;
 typedef int t_stat;
+typedef int lwt_flags_t;
 
 /* User level info argument type.  */
 enum lwt_info_t
@@ -63,7 +64,7 @@ enum lwt_status
     /* This is a zombie thread. */
     LWT_ZOMBIES,
     /* This thread is currently running. */
-    LWT_STATUS_RUNNING
+    LWT_RUNNING
 };
 
 /* if status is blocked, this shows status for blockage */
@@ -85,16 +86,8 @@ struct _lwt_context
 /* buffer ring of the channel*/
 struct _buffer_ring
 {
-    int size;
-    struct list_head br;
-};
-typedef struct _buffer_ring * buffer_ring;
-
-/* node of the buffer ring*/
-struct br_node
-{
-    struct list list_node;
-    void * datapr;
+    int tail, head, count;
+    void * data_buffer;
 };
 
 /* channel group */
@@ -126,13 +119,14 @@ struct _lwt_channel
     struct _lwt_t * receiver;
     
     /* buffer ring */
-    buffer_ring br;
+    struct _buffer_ring buffer;
+    int size;
     
     /* channel group need??*/
     lwt_cgrp_t cgroup;
     
     /* if there is a event */
-    int event;
+    int ready;
     
     /* mark of the channel*/
     void * mark;
@@ -187,7 +181,7 @@ typedef void * (*lwt_chan_fn_t)(lwt_chan_t);
 
 
 /* --------------------------- Funciton declaration for lwt thread operation --------------------------- */
-lwt_t  lwt_create(lwt_fn_t fn, void * data, enum lwt_flags_t flags);
+lwt_t  lwt_create(lwt_fn_t fn, void * data, lwt_flags_t flags);
 void * lwt_join(lwt_t thread_to_wait);
 void lwt_die(void *);
 int lwt_yield(lwt_t strong_thread);
