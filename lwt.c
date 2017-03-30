@@ -259,7 +259,8 @@ lwt_join(lwt_t thread_to_wait)
         zombie_counter--;
         list_head_add_d(&recycle_queue, thread_to_wait);
         
-        return thread_to_wait->message_data;
+        //return thread_to_wait->message_data;
+        return NULL;
     }
     
     /* update oneside thread */
