@@ -135,6 +135,7 @@ lwt_snd(lwt_chan_t chan, void * data)
     if (chan->buffer.tail - chan->buffer.head != chan->size) {
         /* buffer has space */
         ((uint *)(chan->buffer.data_buffer))[chan->buffer.tail++ % chan->size] = (uint)data;
+	printd("put data on buffer %d %d\n", ((uint *)(chan->buffer.data_buffer))[chan->buffer.tail-1], chan->buffer.tail);
         return 0;
     }
     
