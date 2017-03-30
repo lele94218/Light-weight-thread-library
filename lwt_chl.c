@@ -163,7 +163,7 @@ lwt_snd(lwt_chan_t chan, void * data)
     block_counter++;
     current_thread->state = LWT_BLOCKED;
     current_thread->block_for = BLOCKED_SENDING;
-    lwt_yield(NULL);
+    __lwt_schedule();
     return 0;
     
 }
@@ -177,8 +177,9 @@ lwt_rcv(lwt_chan_t chan)
     /* receive data from buffer */
     if (chan->buffer.tail - chan->buffer.head != 0)
     {
+      
         result = (void *) (((uint *)(chan->buffer.data_buffer))[(chan->buffer.head++) % chan->size]);
-        
+  
         /* sender queue not empty, free one, move its data to buffer */
         if (!list_head_empty(&(chan->sender_queue)))
         {
@@ -216,7 +217,7 @@ lwt_rcv(lwt_chan_t chan)
     list_rem_d(current_thread);
     block_counter++;
     nrcving++;
-    lwt_yield(NULL);
+    __lwt_schedule();
     return current_thread->message_data;
 }
 
@@ -229,7 +230,7 @@ lwt_snd_chan(lwt_chan_t through, lwt_chan_t sending)
 {
     int return_value = lwt_snd(through, (void *) sending);
     /* in case the reciever thread is blocked. */
-    lwt_yield(NULL);
+    __lwt_schedule();
     return return_value;
 }
 
