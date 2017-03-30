@@ -161,6 +161,8 @@ lwt_snd(lwt_chan_t chan, void * data)
     list_head_add_d(&(chan->sender_queue), current_thread);
     nsnding++;
     block_counter++;
+    current_thread->state = LWT_BLOCKED;
+    current_thread->block_for = BLOCKED_SENDING;
     lwt_yield(NULL);
     return 0;
     
