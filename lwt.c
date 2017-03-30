@@ -278,6 +278,6 @@ lwt_current ()
 int
 lwt_id (lwt_t input_thread)
 {
-	return current_thread->lwt_id;
+	return input_thread->lwt_id;
 }
 

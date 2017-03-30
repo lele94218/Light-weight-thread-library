@@ -6,7 +6,7 @@
 
 #define rdtscll(val) __asm__ __volatile__("rdtsc" : "=A" (val))
 
-#define ITER 100000
+#define ITER 100
 
 /*
  * My output on an Intel Core i5-2520M CPU @ 2.50GHz:
@@ -349,6 +349,10 @@ test_grpwait(int chsz, int grpsz)
         lwt_chan_mark_set(cs[i], (void*)lwt_id(ts[i]));
         lwt_cgrp_add(g, cs[i]);
     }
+    
+    //If the child is executed, then it generates events on the channel which prevents the channel from being freed.  If you assume that children are not immediately executed, that's fine, and then you could free the channel.  In that case, you can uncomment that test, but you do want to test that that behavior of free does work at some point (perhaps by yielding *before* that assert).
+    
+    lwt_yield(NULL);
     assert(lwt_cgrp_free(g) == -1);
     /**
      * Q: why don't we iterate through all of the data here?

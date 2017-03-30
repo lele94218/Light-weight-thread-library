@@ -119,7 +119,25 @@ lwt_snd (lwt_chan_t chan, void * data)
 				current_thread->lwt_id, chan->chan_id);
 		return -1;
 	}
-
+    
+    if (chan->buffer.tail == chan->buffer.head)
+    {
+        /* buffer is empty */
+        chan->ready = 1;
+        if (chan->cgroup)
+        {
+            if (!list_head_empty (&chan->cgroup->wait_queue))
+            {
+                lwt_t waiter = list_head_first_d(
+                                                 &(chan->cgroup->wait_queue), struct _lwt_t);
+                block_counter--;
+                list_rem_d(waiter);
+                waiter->state = LWT_RUNNABLE;
+                list_head_append_d(&run_queue, waiter);
+            }
+        }
+    }
+    
 	if (chan->receiver->state == LWT_BLOCKED
 			&& chan->receiver->block_for == BLOCKED_RECEIVING)
 	{
@@ -141,23 +159,7 @@ lwt_snd (lwt_chan_t chan, void * data)
 
 	if (chan->buffer.tail - chan->buffer.head != chan->size)
 	{
-		if (chan->buffer.tail == chan->buffer.head)
-		{
-			/* buffer is empty */
-			chan->ready = 1;
-			if (chan->cgroup)
-			{
-				if (!list_head_empty (&chan->cgroup->wait_queue))
-				{
-					lwt_t waiter = list_head_first_d(
-							&(chan->cgroup->wait_queue), struct _lwt_t);
-					block_counter--;
-					list_rem_d(waiter);
-					waiter->state = LWT_RUNNABLE;
-					list_head_append_d(&run_queue, waiter);
-				}
-			}
-		}
+
 		/* buffer has space */
 		((uint *) (chan->buffer.data_buffer))[chan->buffer.tail++ % chan->size] =
 				(uint) data;
