@@ -39,8 +39,12 @@ void fun()
     t2 = lwt_create_chan((void *)fun1,c0);
 
     lwt_snd_chan(c0, c_itself);
+    printf("data1 has been sent \n");
     lwt_snd_chan(c0, c_itself2);
+    printf("data2 has been sent \n");
     lwt_snd_chan(c0, c_itself3);
+    printf("data2 has been sent \n");
+
 
     lwt_cgrp_t cgrp1 = lwt_cgrp();
     lwt_cgrp_add(cgrp1, c_itself);
@@ -73,10 +77,13 @@ int main(int argc, char *argv[])
     lwt_yield(t1);
     lwt_yield(NULL);
     lwt_yield(NULL);
+    lwt_yield(NULL);
+    lwt_yield(NULL);
+
 //    lwt_chan(0);
 //    print_all_info();
-    lwt_t t3 = lwt_create((void *)fun, NULL, LWT_NOJOIN);
-    lwt_join(t3);
+//    lwt_t t3 = lwt_create((void *)fun, NULL, LWT_NOJOIN);
+//    lwt_join(t3);
     printf("main function returned\n");
     return 0;
 }
