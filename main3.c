@@ -6,7 +6,7 @@
 
 #define rdtscll(val) __asm__ __volatile__("rdtsc" : "=A" (val))
 
-#define ITER 10000
+#define ITER 3
 
 /*
  * My output on an Intel Core i5-2520M CPU @ 2.50GHz:
@@ -283,7 +283,7 @@ void *
 fn_async_steam(lwt_chan_t to)
 {
     int i;
-    
+    printf("----------------------------------------child\n");
     for (i = 0 ; i < ITER ; i++) lwt_snd(to, (void*)(i+1));
     lwt_chan_deref(to);
     
@@ -297,15 +297,19 @@ test_perf_async_steam(int chsz)
     lwt_t t;
     int i;
     unsigned long long start, end;
-    
+    //printf("----------------------------------------\n");
+    //print_queue_content(LWT_INFO_NTHD_RUNNABLE);
     async_sz = chsz;
     assert(LWT_RUNNING == lwt_current()->state);
     from = lwt_chan(chsz);
     assert(from);
+
     t = lwt_create_chan(fn_async_steam, from);
     assert(lwt_info(LWT_INFO_NTHD_RUNNABLE) == 2);
     rdtscll(start);
+    printf("----------------------------------------main\n");
     for (i = 0 ; i < ITER ; i++) assert(i+1 == (int)lwt_rcv(from));
+
     rdtscll(end);
     printf("[PERF] %5lld <- asynchronous snd->rcv (buffer size %d)\n",
            (end-start)/(ITER*2), chsz);
@@ -382,7 +386,7 @@ main(void)
 {
     test_perf();
     test_perf_channels(0);
-    test_perf_async_steam(ITER/10 < 100 ? ITER/10 : 100);
+    test_perf_async_steam(3);
     test_crt_join_sched();
     test_multisend(0);
     test_multisend(ITER/10 < 100 ? ITER/10 : 100);
