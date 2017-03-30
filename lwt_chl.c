@@ -156,7 +156,7 @@ lwt_snd(lwt_chan_t chan, void * data)
     
     /* buffer doesn't have space */
     current_thread->message_data = data;
-    printd("current_thread: %d, channel: %d\n buffer doesn't have space. \n", current_thread->lwt_id, chan->chan_id);
+    printd("current_thread: %d, channel: %d buffer doesn't have space. \n", current_thread->lwt_id, chan->chan_id);
     list_rem_d(current_thread);
     list_head_add_d(&(chan->sender_queue), current_thread);
     nsnding++;
@@ -299,6 +299,12 @@ lwt_cgrp_free (lwt_cgrp_t cgrp)
     {
         if (node->ready == 1)
             return -1;
+    }
+    
+    node = NULL;
+    list_foreach(&cgrp->chl_list, node, cglist)
+    {
+        node->cgroup = NULL;
     }
     free(cgrp);
     return 0;
