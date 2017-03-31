@@ -21,7 +21,7 @@ list_ll_add(struct list * link, struct list * new_link)
     new_link->n->p = new_link;
 }
 
-/* Init list */
+/* initialize list */
 static inline void
 list_ll_init(struct list *list)
 {
@@ -29,7 +29,7 @@ list_ll_init(struct list *list)
     list->p = list;
 }
 
-/* Init list head */
+/* initialize list head */
 static inline void
 list_head_init(struct list_head * lh)
 {

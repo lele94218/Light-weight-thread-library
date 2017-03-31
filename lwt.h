@@ -2,6 +2,7 @@
 #define LWT_H
 #include "lwt_list.h"
 
+
 /* turn this on will enable error check for user input */
 #ifdef DEBUG
 #define printd(format, ...) printf("%s Line: %05d: " format, __FILE__, __LINE__, ## __VA_ARGS__)
@@ -11,7 +12,7 @@
 
 
 /* define size of stack for created thread */
-#define MAX_STACK_SIZE (10 * 1024 * 8)
+#define MAX_STACK_SIZE (100 * 1024 * 8)
 
 /* define NULL pointer */
 #define LWT_NULL NULL
@@ -120,6 +121,8 @@ struct _lwt_channel
     
     /* buffer ring */
     struct _buffer_ring buffer;
+
+    /* channel buffer size */
     int size;
     
     /* channel group need??*/
@@ -128,6 +131,9 @@ struct _lwt_channel
     /* if there is a event */
     int ready;
     
+    /* synchronous data */
+    void * syn_data;
+
     /* mark of the channel*/
     void * mark;
 };

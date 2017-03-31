@@ -6,7 +6,7 @@
 
 #define rdtscll(val) __asm__ __volatile__("rdtsc" : "=A" (val))
 
-#define ITER 100
+#define ITER 2
 
 /*
  * My output on an Intel Core i5-2520M CPU @ 2.50GHz:
@@ -368,7 +368,9 @@ test_grpwait(int chsz, int grpsz)
         
         c = lwt_cgrp_wait(g);
         assert(c);
+        printd("wanted result: %d\n", (int)lwt_chan_mark_get(c));
         r = (int)lwt_rcv(c);
+        printd("receive result: %d from channel %d\n", r, c->chan_id);
         assert(r == (int)lwt_chan_mark_get(c));
     }
     for (i = 0 ; i < grpsz ; i++) {
