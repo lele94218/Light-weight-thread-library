@@ -8,7 +8,6 @@ MAIN = lwt
 
 all: $(MAIN)
 $(MAIN): $(SRCS)
-	if [ ! -f ./build/main ]; then mkdir build;fi 
 	$(CC) $(CFLAGS) $(SRCS) -o $(TARGET)
 debug: $(SRCS)
 	$(CC) $(DEBUG) $(SRCS) -o $(TARGET)
