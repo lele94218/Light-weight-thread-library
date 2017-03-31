@@ -61,15 +61,15 @@ test_perf(void)
     /* Performance tests */
     rdtscll(start);
     for (i = 0 ; i < ITER ; i++) {
-        chld1 = lwt_create(fn_null, NULL, 0);
+        chld1 = lwt_create(fn_null, NULL);
         lwt_join(chld1);
     }
     rdtscll(end);
     printf("[PERF] %5lld <- fork/join\n", (end-start)/ITER);
     IS_RESET();
     
-    chld1 = lwt_create(fn_bounce, (void*)1, 0);
-    chld2 = lwt_create(fn_bounce, NULL, 0);
+    chld1 = lwt_create(fn_bounce, (void*)1);
+    chld2 = lwt_create(fn_bounce, NULL);
     lwt_join(chld1);
     lwt_join(chld2);
     IS_RESET();
@@ -90,7 +90,7 @@ fn_nested_joins(void *d)
         assert(lwt_info(LWT_INFO_NTHD_RUNNABLE) == 1);
         lwt_die(NULL);
     }
-    chld = lwt_create(fn_nested_joins, (void*)1, 0);
+    chld = lwt_create(fn_nested_joins, (void*)1);
     lwt_join(chld);
 }
 
@@ -133,29 +133,29 @@ test_crt_join_sched(void)
     /* functional tests: scheduling */
     lwt_yield(LWT_NULL);
     
-    chld1 = lwt_create(fn_sequence, (void*)1, 0);
-    chld2 = lwt_create(fn_sequence, (void*)2, 0);
+    chld1 = lwt_create(fn_sequence, (void*)1);
+    chld2 = lwt_create(fn_sequence, (void*)2);
     lwt_join(chld2);
     lwt_join(chld1);
     IS_RESET();
     
     /* functional tests: join */
-    chld1 = lwt_create(fn_null, NULL, 0);
+    chld1 = lwt_create(fn_null, NULL);
     lwt_join(chld1);
     IS_RESET();
     
-    chld1 = lwt_create(fn_null, NULL, 0);
+    chld1 = lwt_create(fn_null, NULL);
     lwt_yield(LWT_NULL);
     lwt_join(chld1);
     IS_RESET();
     
-    chld1 = lwt_create(fn_nested_joins, NULL, 0);
+    chld1 = lwt_create(fn_nested_joins, NULL);
     lwt_join(chld1);
     IS_RESET();
     
     /* functional tests: join only from parents */
-    chld1 = lwt_create(fn_identity, (void*)0x37337, 0);
-    chld2 = lwt_create(fn_join, chld1, 0);
+    chld1 = lwt_create(fn_identity, (void*)0x37337);
+    chld2 = lwt_create(fn_join, chld1);
     lwt_yield(LWT_NULL);
     lwt_yield(LWT_NULL);
     lwt_join(chld2);
@@ -163,12 +163,12 @@ test_crt_join_sched(void)
     IS_RESET();
     
     /* functional tests: passing data between threads */
-    chld1 = lwt_create(fn_identity, (void*)0x37337, 0);
+    chld1 = lwt_create(fn_identity, (void*)0x37337);
     assert((void*)0x37337 == lwt_join(chld1));
     IS_RESET();
     
     /* functional tests: directed yield */
-    chld1 = lwt_create(fn_null, NULL, 0);
+    chld1 = lwt_create(fn_null, NULL);
     lwt_yield(chld1);
     assert(lwt_info(LWT_INFO_NTHD_ZOMBIES) == 1);
     lwt_join(chld1);
@@ -349,17 +349,10 @@ test_grpwait(int chsz, int grpsz)
         lwt_chan_mark_set(cs[i], (void*)lwt_id(ts[i]));
         lwt_cgrp_add(g, cs[i]);
     }
-    
-    //If the child is executed, then it generates events on the channel which prevents the channel from being freed.
-    //If you assume that children are not immediately executed, that's fine, and then you could free the channel.
-    //In that case, you can uncomment that test, but you do want to test that that behavior of free does work at some
-    //point (perhaps by yielding *before* that assert).
-    
-    lwt_yield(NULL);
     assert(lwt_cgrp_free(g) == -1);
     /**
      * Q: why don't we iterate through all of the data here?
-     *
+     * 
      * A: We need to fix 1) cevt_wait to be level triggered, or 2)
      * provide a function to detect if there is data available on
      * a channel.  Either of these would allows us to iterate on a
@@ -371,9 +364,7 @@ test_grpwait(int chsz, int grpsz)
         
         c = lwt_cgrp_wait(g);
         assert(c);
-        printd("wanted result: %d\n", (int)lwt_chan_mark_get(c));
         r = (int)lwt_rcv(c);
-        printd("receive result: %d from channel %d\n", r, c->chan_id);
         assert(r == (int)lwt_chan_mark_get(c));
     }
     for (i = 0 ; i < grpsz ; i++) {
