@@ -12,7 +12,7 @@
 
 
 /* define size of stack for created thread */
-#define MAX_STACK_SIZE (100 * 1024 * 8)
+#define MAX_STACK_SIZE (1000 * 1024 * 8)
 
 /* define NULL pointer */
 #define LWT_NULL NULL
