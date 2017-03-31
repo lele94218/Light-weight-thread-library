@@ -1,6 +1,10 @@
 /build
+/Debug
 .DS_Store
 *.xcodeproj/
+.cproject
+.project
+.settings/*
 
 # Object files
 *.o
