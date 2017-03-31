@@ -350,7 +350,10 @@ test_grpwait(int chsz, int grpsz)
         lwt_cgrp_add(g, cs[i]);
     }
     
-    //If the child is executed, then it generates events on the channel which prevents the channel from being freed.  If you assume that children are not immediately executed, that's fine, and then you could free the channel.  In that case, you can uncomment that test, but you do want to test that that behavior of free does work at some point (perhaps by yielding *before* that assert).
+    //If the child is executed, then it generates events on the channel which prevents the channel from being freed.
+    //If you assume that children are not immediately executed, that's fine, and then you could free the channel.
+    //In that case, you can uncomment that test, but you do want to test that that behavior of free does work at some
+    //point (perhaps by yielding *before* that assert).
     
     lwt_yield(NULL);
     assert(lwt_cgrp_free(g) == -1);

@@ -219,7 +219,7 @@ lwt_yield (lwt_t yield_to)
 			|| (yield_to && yield_to->state != LWT_RUNNABLE
 					&& yield_to->state != LWT_RUNNING))
 	{
-		printd("thread %d is yielding to itself or it is not runable\n",current_thread->lwt_id);
+		printd("thread %d is yielding to itself or it is not runnable\n",current_thread->lwt_id);
 		return 0;
 	}
 	/* yield to NULL */
