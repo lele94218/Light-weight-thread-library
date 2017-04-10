@@ -48,10 +48,6 @@ enum lwt_info_t
     LWT_INFO_NRCVING,
     /* number of threads blocked receiving */
     LWT_INFO_NJOINING,
-    /* number of active channels */
-    LWT_INFO_NCHAN,
-    /* number of dead channels, not freed yet */
-    LWT_INFO_DCHAN,
 };
 
 /* thread status */
@@ -109,8 +105,6 @@ struct _lwt_channel
     
     /* Linked list node, used to find its position in global channel queue */
     struct list list_node;
-    
-    struct list cglist;
     
     /* number of senders have access to this channel */
     int snd_cnt;
@@ -213,4 +207,18 @@ void *lwt_chan_mark_get(lwt_chan_t);
 /* --------------------------- debugging function --------------------------- */
 void print_queue_content(enum lwt_info_t);
 int lwt_info(enum lwt_info_t t);
+
+/* --------------- global variable --------------- */
+
+extern int block_counter;
+extern int lwt_counter;
+extern int zombie_counter;
+extern int nrcving;
+extern int nsnding;
+
+extern lwt_t current_thread;
+extern struct list_head run_queue;
+extern struct list_head recycle_queue;
+
+
 #endif

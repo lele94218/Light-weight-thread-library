@@ -7,15 +7,7 @@
 /* --------------- initialization function --------------- */
 void __initiate (void) __attribute__((constructor));
 
-/* --------------- global variable --------------- */
 
-extern int block_counter;
-extern int lwt_counter;
-extern int zombie_counter;
-
-/* two channel queues, one for working channel, one for dead channel */
-extern struct list_head chan_working;
-extern struct list_head chan_dead;
 
 /* four queues, one for thread running, one for blocking, one for zombies, one for recycle */
 struct list_head run_queue;
@@ -109,14 +101,6 @@ __initiate()
     
     /* initialize recycle queue */
     list_head_init(&recycle_queue);
-    
-    
-    /* initialize working channel queue */
-    list_head_init(&chan_working);
-    
-    /* initialize dead channel queue */
-    list_head_init(&chan_dead);
-    
     
     current_thread = (lwt_t) malloc (sizeof(struct _lwt_t));
     __init_thread(current_thread);
@@ -289,5 +273,6 @@ lwt_id(lwt_t input_thread)
 {
     return input_thread->lwt_id;
 }
+
 
 

@@ -4,17 +4,6 @@
 #include "lwt_list.h"
 #include "lwt.h"
 
-extern lwt_t current_thread;
-extern struct list_head run_queue;
-extern struct list_head recycle_queue;
-
-extern void __lwt_schedule();
-
-
-/* two channel queues, one for working channel, one for dead channel */
-struct list_head chan_working;
-struct list_head chan_dead;
-
 int nrcving = 0;
 int nsnding = 0;
 int chan_counter = 0;
@@ -29,7 +18,7 @@ int block_counter = 0;
 void __print_a_chan_queue(struct list_head *);
 
 /* --------------- Internal function declaration --------------- */
-int __get_queue_size(struct list_head * input_list);
+int __get_queue_size(struct list_head *);
 
 /* --------------- initialization function --------------- */
 
@@ -38,9 +27,7 @@ int __get_queue_size(struct list_head * input_list);
 static void inline
 __init_chan(lwt_chan_t chan, int size)
 {
-    //    chan->br = malloc(sizeof(struct _buffer_ring));
-    //    chan->br->size = size;
-    //    list_head_init(&chan->br->br);
+
     chan->size = size;
     chan->buffer.data_buffer = malloc(size * sizeof(uint));
     chan->buffer.tail = chan->buffer.head = 0;
@@ -49,7 +36,6 @@ __init_chan(lwt_chan_t chan, int size)
     chan->snd_cnt = 0;
     chan->chan_id = chan_counter++;
     list_head_init(&(chan->sender_queue));
-    list_head_append_d(&chan_working, chan);
 }
 
 /* create a thread with initial channel, receiver become created thread, creator thread become sender */
@@ -67,17 +53,7 @@ lwt_chan_t
 lwt_chan(int size)
 {
     lwt_chan_t chan;
-    if (!list_head_empty(&chan_dead))
-    {
-        /* not empty */
-        chan = list_head_first_d(&chan_dead, struct _lwt_channel);
-        list_rem_d(chan);
-        printd("create one channel from dead channel pool.\n");
-    }
-    else
-    {
-        chan = (lwt_chan_t)malloc(sizeof(struct _lwt_channel));
-    }
+    chan = (lwt_chan_t)malloc(sizeof(struct _lwt_channel));
     __init_chan(chan, size);
     printd("thread %d has created channel %d.\n", current_thread->lwt_id, chan->chan_id);
     return chan;
@@ -100,8 +76,7 @@ lwt_chan_deref (lwt_chan_t chan)
     if (chan->snd_cnt == 0 && chan->receiver == NULL)
     {
         printd("channel %d has been freed from memory.\n", chan->chan_id);
-        list_rem_d(chan);
-        list_head_add_d(&chan_dead, chan);
+        free(chan);
     }
 }
 /* block the thread and yield */
@@ -125,8 +100,8 @@ void __block_thread(lwt_t thread, enum block_status block_for, lwt_chan_t chan)
 
 void __resume_thread(lwt_t thread)
 {
-    nrcving -= thread->block_for == BLOCKED_RECEIVING?1:0;
-    nsnding -= thread->block_for == BLOCKED_SENDING?1:0;
+    nrcving -= thread->block_for == BLOCKED_RECEIVING ? 1 : 0;
+    nsnding -= thread->block_for == BLOCKED_SENDING ? 1 : 0;
     //if(thread->block_for==BLOCKED_SENDING) list_rem_d(thread);
     list_rem_d(thread);
     thread->state = LWT_RUNNABLE;
@@ -163,10 +138,10 @@ lwt_snd(lwt_chan_t chan, void * data)
 
     }
     if (chan->buffer.tail - chan->buffer.head != chan->size) {
-    /* buffer is not full */
-    ((uint *)(chan->buffer.data_buffer))[chan->buffer.tail++ % chan->size] = (uint)data;
-    printd("thread %d put data: %d on chan %d's buffer at location %d\n", current_thread->lwt_id, ((uint *)(chan->buffer.data_buffer))[chan->buffer.tail-1], chan->chan_id,chan->buffer.tail);
-    return 0;
+        /* buffer is not full */
+        ((uint *)(chan->buffer.data_buffer))[chan->buffer.tail++ % chan->size] = (uint)data;
+        printd("thread %d put data: %d on chan %d's buffer at location %d\n", current_thread->lwt_id, ((uint *)(chan->buffer.data_buffer))[chan->buffer.tail-1], chan->chan_id,chan->buffer.tail);
+        return 0;
     }
     
     /* buffer doesn't have space */
@@ -266,7 +241,7 @@ lwt_cgrp_add (lwt_cgrp_t cgrp, lwt_chan_t chan)
     {
         return -1;
     }
-    list_head_append(&cgrp->chl_list, chan, cglist);
+    list_head_append_d(&cgrp->chl_list, chan);
     chan->cgroup = cgrp;
     printd("channel %d added to channel group \n", chan->chan_id);
     return 0;
@@ -284,7 +259,7 @@ lwt_cgrp_rem(lwt_cgrp_t cgrp, lwt_chan_t chan)
     {
         return -1;
     }
-    list_rem(chan, cglist);
+    list_rem_d(chan);
     chan->cgroup = NULL;
     return 0;
 }
@@ -295,7 +270,7 @@ lwt_cgrp_free (lwt_cgrp_t cgrp)
 {
     lwt_chan_t node = NULL;
     
-    list_foreach(&cgrp->chl_list, node, cglist)
+    list_foreach_d(&cgrp->chl_list, node)
     {
         if (node->ready == 1)
             printd("tried to free a group but failed because not empty! \n");
@@ -303,7 +278,7 @@ lwt_cgrp_free (lwt_cgrp_t cgrp)
     }
     
     node = NULL;
-    list_foreach(&cgrp->chl_list, node, cglist)
+    list_foreach_d(&cgrp->chl_list, node)
     {
         node->cgroup = NULL;
     }
@@ -324,7 +299,7 @@ lwt_cgrp_wait (lwt_cgrp_t cgrp)
     lwt_chan_t chan = NULL;
     while (1)
     {
-        list_foreach(&cgrp->chl_list, chan, cglist)
+        list_foreach_d(&cgrp->chl_list, chan)
         {
             printd("channel %d with status %d\n.", chan->chan_id, chan->ready);
             if (chan->ready == 1)
@@ -375,19 +350,6 @@ __get_queue_size(struct list_head * input_list)
     return cnt;
 }
 
-/* get the size of blocked thread with a particular block reason */
-//int
-//__get_blocked_queue_size(enum block_status block_for)
-//{
-//    int cnt = 0;
-//    struct list * curr = block_queue.l.n;
-//    while (curr != &(block_queue.l))
-//    {
-//        if((container(curr, struct _lwt_t, list_node))->block_for == block_for) cnt++;
-//        curr = curr->n;
-//   }
-//    return cnt;
-//}
 
 /* print the content of a thread queue */
 void
@@ -428,10 +390,6 @@ lwt_info(enum lwt_info_t t)
             return zombie_counter;
         case LWT_INFO_NTHD_RECYCLE:
             return __get_queue_size(&recycle_queue);
-        case LWT_INFO_NCHAN:
-            return __get_queue_size(&chan_working);
-        case LWT_INFO_DCHAN:
-            return __get_queue_size(&chan_dead);
         case LWT_INFO_NSNDING:
             return nsnding;
         case LWT_INFO_NRCVING:
@@ -456,16 +414,10 @@ print_queue_content(enum lwt_info_t input)
             printd("recycle queue showed as below: \n");
             __print_a_thread_queue(&recycle_queue);
             break;
-        case LWT_INFO_NCHAN:
-            printd("working channel showed as below: \n");
-            __print_a_chan_queue(&chan_working);
-            break;
-        case LWT_INFO_DCHAN:
-            printd("dead channel showed as below: \n");
-            __print_a_chan_queue(&chan_dead);
-            break;
         default:
             printd("cannot identify printing instructions\n");
             break;
     }
 }
+
+
