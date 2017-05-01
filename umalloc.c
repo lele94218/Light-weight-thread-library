@@ -1,4 +1,3 @@
-#include <stdlib.h>
 #include "lwt.h"
 
 // Memory allocator by Kernighan and Ritchie,
@@ -20,7 +19,7 @@ static Header base;
 static Header *freep;
 
 void
-vfree(void *ap)
+ufree(void *ap)
 {
   Header *bp, *p;
 
@@ -46,20 +45,31 @@ morecore(uint nu)
 {
   char *p;
   Header *hp;
+  int i, k;
 
-  if(nu < 4096)
-    nu = 4096;
-  p = malloc(nu * sizeof(Header));
+  // if(nu < 4096)
+  //   nu = 4096;
+  p = cos_page_bump_alloc(ci);
+
+  if ((nu / 4096) > 0)
+  {
+    k = nu / 4096;
+    for (i = 0; i < k; ++ i)
+    {
+      cos_page_bump_alloc(ci);
+    }
+  }
+
   if(p == (char*)-1)
     return 0;
   hp = (Header*)p;
   hp->s.size = nu;
-  vfree((void*)(hp + 1));
+  ufree((void*)(hp + 1));
   return freep;
 }
 
 void*
-vmalloc(uint nbytes)
+umalloc(uint nbytes)
 {
   Header *p, *prevp;
   uint nunits;

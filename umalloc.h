@@ -1,7 +1,7 @@
 #ifndef UMALLOC_H
 #define UMALLOC_H
 
-void vfree(void *ap);
-void* vmalloc(uint nbytes);
+void ufree(void *ap);
+void * umalloc(uint nbytes);
 
 #endif
