@@ -3,6 +3,7 @@
 
 #include "lwt_list.h"
 #include "lwt.h"
+#include "umalloc.h"
 
 int nrcving = 0;
 int nsnding = 0;
@@ -29,7 +30,7 @@ __init_chan(lwt_chan_t chan, int size)
 {
 
     chan->size = size;
-    chan->buffer.data_buffer = malloc(size * sizeof(uint));
+    chan->buffer.data_buffer = vmalloc(size * sizeof(uint));
     chan->buffer.tail = chan->buffer.head = 0;
     
     chan->receiver = current_thread;
@@ -53,7 +54,7 @@ lwt_chan_t
 lwt_chan(int size)
 {
     lwt_chan_t chan;
-    chan = (lwt_chan_t)malloc(sizeof(struct _lwt_channel));
+    chan = (lwt_chan_t)vmalloc(sizeof(struct _lwt_channel));
     __init_chan(chan, size);
     printd("thread %d has created channel %d.\n", current_thread->lwt_id, chan->chan_id);
     return chan;
@@ -76,7 +77,7 @@ lwt_chan_deref (lwt_chan_t chan)
     if (chan->snd_cnt == 0 && chan->receiver == NULL)
     {
         printd("channel %d has been freed from memory.\n", chan->chan_id);
-        free(chan);
+        vfree(chan);
     }
 }
 /* block the thread and yield */
@@ -225,7 +226,7 @@ lwt_rcv_chan(lwt_chan_t chan)
 lwt_cgrp_t
 lwt_cgrp (void)
 {
-    lwt_cgrp_t cgrp = malloc(sizeof(struct _lwt_cgrp));
+    lwt_cgrp_t cgrp = vmalloc(sizeof(struct _lwt_cgrp));
     if (!cgrp) return LWT_NULL;
     list_head_init(&cgrp->chl_list);
     list_head_init(&cgrp->wait_queue);
@@ -282,7 +283,7 @@ lwt_cgrp_free (lwt_cgrp_t cgrp)
     {
         node->cgroup = NULL;
     }
-    free(cgrp);
+    vfree(cgrp);
     printd("a group has been freed! \n");
     return 0;
 }

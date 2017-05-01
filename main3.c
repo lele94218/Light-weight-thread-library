@@ -6,7 +6,7 @@
 
 #define rdtscll(val) __asm__ __volatile__("rdtsc" : "=A" (val))
 
-#define ITER 3
+#define ITER 100
 /*
  * My output on an Intel Core i5-2520M CPU @ 2.50GHz:
  *
@@ -367,8 +367,8 @@ lwt_yield(NULL);
      * a channel.  Either of these would allows us to iterate on a
      * channel while there is more data pending.
      */
-//    for (i = 0 ; i < ((ITER * grpsz)-(grpsz*chsz)) ; i++) {
-    for (i = 0 ; i < ITER * grpsz   ; i++) {
+    // for (i = 0 ; i < ((ITER * grpsz)-(grpsz*chsz)) ; i++) {
+   for (i = 0 ; i < ITER * grpsz   ; i++) {
         lwt_chan_t c;
         int r;
 
@@ -392,10 +392,10 @@ printf("----------------------------------------------\n");
 int
 main(void)
 {
-    test_perf();
-    test_perf_channels(0);
-    test_perf_async_steam(ITER/10 < 100 ? ITER/10 : 100);
-    test_crt_join_sched();
+   test_perf();
+   test_perf_channels(0);
+   test_perf_async_steam(ITER/10 < 100 ? ITER/10 : 100);
+   test_crt_join_sched();
 
     /*printf("program about to end---------------\n");
     print_queue_content(LWT_INFO_NTHD_RUNNABLE);
@@ -407,11 +407,11 @@ main(void)
     print_queue_content(LWT_INFO_NTHD_RECYCLE);
     printf("%d\n",lwt_info(LWT_INFO_NTHD_ZOMBIES));*/
 
-    test_multisend(0);
-    test_multisend(ITER/10 < 100 ? ITER/10 : 100);
+   test_multisend(0);
+   test_multisend(ITER/10 < 100 ? ITER/10 : 100);
 
-    test_grpwait(0, 3);
-    test_grpwait(3, 3);
+   test_grpwait(0, 50);
+    test_grpwait(50, 50);
 //test_grpwait(2, 1);
     
     return 0;

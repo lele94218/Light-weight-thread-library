@@ -2,7 +2,7 @@ CC = gcc
 CFLAGS = -Wall -O3
 DEBUG = -g -D DEBUG
 TARGET = ./build/main
-SRCS = main3.c lwt.c lwt_chl.c
+SRCS = main3.c lwt.c lwt_chl.c umalloc.c
 TSTSRC = test.c lwt.c lwt_chl.c
 MAIN = lwt
 
