@@ -1,7 +1,3 @@
-#include <stdlib.h>
-#include <stdio.h>
-
-#include "lwt_list.h"
 #include "lwt.h"
 #include "umalloc.h"
 
@@ -30,7 +26,7 @@ __init_chan(lwt_chan_t chan, int size)
 {
 
     chan->size = size;
-    chan->buffer.data_buffer = vmalloc(size * sizeof(uint));
+    chan->buffer.data_buffer = umalloc(size * sizeof(uint));
     chan->buffer.tail = chan->buffer.head = 0;
     
     chan->receiver = current_thread;
@@ -54,7 +50,7 @@ lwt_chan_t
 lwt_chan(int size)
 {
     lwt_chan_t chan;
-    chan = (lwt_chan_t)vmalloc(sizeof(struct _lwt_channel));
+    chan = (lwt_chan_t)umalloc(sizeof(struct _lwt_channel));
     __init_chan(chan, size);
     printd("thread %d has created channel %d.\n", current_thread->lwt_id, chan->chan_id);
     return chan;
@@ -77,7 +73,7 @@ lwt_chan_deref (lwt_chan_t chan)
     if (chan->snd_cnt == 0 && chan->receiver == NULL)
     {
         printd("channel %d has been freed from memory.\n", chan->chan_id);
-        vfree(chan);
+        free(chan);
     }
 }
 /* block the thread and yield */
@@ -226,7 +222,7 @@ lwt_rcv_chan(lwt_chan_t chan)
 lwt_cgrp_t
 lwt_cgrp (void)
 {
-    lwt_cgrp_t cgrp = vmalloc(sizeof(struct _lwt_cgrp));
+    lwt_cgrp_t cgrp = umalloc(sizeof(struct _lwt_cgrp));
     if (!cgrp) return LWT_NULL;
     list_head_init(&cgrp->chl_list);
     list_head_init(&cgrp->wait_queue);
@@ -283,7 +279,7 @@ lwt_cgrp_free (lwt_cgrp_t cgrp)
     {
         node->cgroup = NULL;
     }
-    vfree(cgrp);
+    free(cgrp);
     printd("a group has been freed! \n");
     return 0;
 }
@@ -334,6 +330,23 @@ lwt_chan_mark_get(lwt_chan_t chan)
 {
     return chan->mark;
 }
+
+
+/* --------------- kernel thread API --------------- */
+
+int lwt_kthd_create(lwt_fn_t fn, void * data, lwt_chan_t c)
+{
+    printc("--------1-----------\n");
+    struct sl_thd * curr_kthd = sl_thd_alloc((cos_thd_fn_t) lwt_yield, NULL);
+    printc("--------2-----------\n");
+    lwt_init_cap(curr_kthd->lwt_cap);
+    printc("--------3-----------\n");
+    if (!(curr_kthd->lwt_cap->current_thread = lwt_create(fn, data, 0)))
+        return -1;
+    return 0;
+}
+
+
 
 /* --------------- internal function for user level debugging --------------- */
 

@@ -1,9 +1,5 @@
-#include <stdio.h>
-#include <stdlib.h>
-
-#include "lwt.h"
-#include "lwt_list.h"
-#include "umalloc.h"
+#include <lwt.h>
+#include <umalloc.h>
 
 /* --------------- initialization function --------------- */
 void __initiate (void) __attribute__((constructor));
@@ -103,13 +99,29 @@ __initiate()
     /* initialize recycle queue */
     list_head_init(&recycle_queue);
     
-    current_thread = (lwt_t) vmalloc (sizeof(struct _lwt_t));
+    current_thread = (lwt_t) umalloc (sizeof(struct _lwt_t));
     __init_thread(current_thread);
     current_thread->state = LWT_RUNNING;
     
     list_head_append_d(&run_queue, current_thread);
     printd("initialization complete\n");
     
+}
+
+
+void
+lwt_init_cap(struct _lwt_cap * lwt_cap)
+{
+    printc("-------2.2-------\n");
+    // lwt_cap = umalloc(sizeof(struct _lwt_cap));
+    printc("-------2.3-------\n");
+    lwt_cap->block_counter = 0;
+    lwt_cap->lwt_counter = 0;
+    lwt_cap->zombie_counter = 0;
+    lwt_cap->nrcving = 0;
+    lwt_cap->nsnding = 0;
+    list_head_init(&lwt_cap->run_queue);
+    list_head_init(&lwt_cap->recycle_queue);
 }
 
 /* create a thread, return its lwt_t pointer */
@@ -128,8 +140,8 @@ lwt_create(lwt_fn_t fn, void * data, lwt_flags_t flags)
     else
     {
         /* Create new thread */
-        next_thread = (lwt_t) vmalloc (sizeof(struct _lwt_t));
-        _sp = (uint) vmalloc(MAX_STACK_SIZE);
+        next_thread = (lwt_t) umalloc (sizeof(struct _lwt_t));
+        _sp = (uint) umalloc(MAX_STACK_SIZE);
         _sp += MAX_STACK_SIZE;
         next_thread->init_sp = _sp;
     }
@@ -274,6 +286,3 @@ lwt_id(lwt_t input_thread)
 {
     return input_thread->lwt_id;
 }
-
-
-
