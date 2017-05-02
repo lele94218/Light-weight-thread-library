@@ -8,7 +8,7 @@
 
 /* turn this on will enable error check for user input */
 #ifdef DEBUG
-#define printd(format, ...) //printc("%s Line: %05d: " format, __FILE__, __LINE__, ## __VA_ARGS__)
+#define printd(format, ...)  printc("%s Line: %05d: " format, __FILE__, __LINE__, ## __VA_ARGS__)
 #else
 #define printd(format, ...)
 #endif
@@ -233,7 +233,7 @@ int lwt_kthd_create(lwt_fn_t fn, lwt_chan_t c);
 /* --------------------------- debugging function --------------------------- */
 void print_queue_content(enum lwt_info_t);
 int lwt_info(enum lwt_info_t t);
-
+extern int printc(char * fmt, ...);
 /* --------------- global variable --------------- */
 
 extern int block_counter;
