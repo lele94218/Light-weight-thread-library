@@ -8,14 +8,14 @@
 
 /* turn this on will enable error check for user input */
 #ifdef DEBUG
-#define printd(format, ...) printc("%s Line: %05d: " format, __FILE__, __LINE__, ## __VA_ARGS__)
+#define printd(format, ...) //printc("%s Line: %05d: " format, __FILE__, __LINE__, ## __VA_ARGS__)
 #else
 #define printd(format, ...)
 #endif
 
 
 /* define size of stack for created thread */
-#define MAX_STACK_SIZE (100 * 1024 * 8)
+#define MAX_STACK_SIZE (1024 * 8)
 
 /* define NULL pointer */
 #define LWT_NULL NULL

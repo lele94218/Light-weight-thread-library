@@ -21,6 +21,8 @@
 #define BUG() do { debug_print("BUG @ "); *((int *)0) = 0; } while (0);
 #define SPIN(iters) do { if (iters > 0) { for (; iters > 0 ; iters -- ) ; } else { while (1) ; } } while (0)
 
+struct cos_compinfo *ci;
+
 static void
 cos_llprint(char *s, int len)
 { call_cap(PRINT_CAP_TEMP, (int)s, len, 0, 0); }
@@ -165,7 +167,7 @@ fn_bounce(void *d)
     lwt_yield(LWT_NULL);
 
     if (!d)
-        printf("[PERF] %5lld <- yield\n", (end - start) / (ITER * 2));
+        printc("[PERF] %5lld <- yield\n", (end - start) / (ITER * 2));
 
     return NULL;
 }
@@ -191,12 +193,15 @@ void test_perf(void)
     rdtscll(start);
     for (i = 0; i < ITER; i++)
     {
+
+        printd("-------------create-------------\n");
         chld1 = lwt_create(fn_null, NULL, 0);
+        printd("-------------created-------------\n");
         lwt_join(chld1);
     }
     rdtscll(end);
 
-    printf("[PERF] %5lld <- fork/join\n", (end - start) / ITER);
+    printc("[PERF] %5lld <- fork/join\n", (end - start) / ITER);
     IS_RESET();
 
     chld1 = lwt_create(fn_bounce, (void *)1, 0);
@@ -255,7 +260,7 @@ fn_join(void *d)
     void *r;
 
     r = lwt_join(d);
-    printf("return value is %d \n", (int)r);
+    printc("return value is %d \n", (int)r);
     assert(r != (void *)0x37337);
 }
 
@@ -263,7 +268,7 @@ void test_crt_join_sched(void)
 {
     lwt_t chld1, chld2;
 
-    printf("[TEST] thread creation/join/scheduling\n");
+    printc("[TEST] thread creation/join/scheduling\n");
 
     /* functional tests: scheduling */
     lwt_yield(LWT_NULL);
@@ -351,7 +356,7 @@ void test_perf_channels(int chsz)
     }
     lwt_chan_deref(to);
     rdtscll(end);
-    printf("[PERF] %5lld <- snd+rcv (buffer size %d)\n",
+    printc("[PERF] %5lld <- snd+rcv (buffer size %d)\n",
            (end - start) / (ITER * 2), chsz);
     lwt_join(t);
 }
@@ -381,7 +386,7 @@ void test_multisend(int chsz)
     lwt_t t1, t2;
     int i, ret[ITER * 2], sum = 0, maxcnt = 0;
 
-    printf("[TEST] multisend (channel buffer size %d)\n", chsz);
+    printc("[TEST] multisend (channel buffer size %d)\n", chsz);
 
     c = lwt_chan(chsz);
     assert(c);
@@ -443,7 +448,7 @@ void test_perf_async_steam(int chsz)
     assert(LWT_RUNNING == lwt_current()->state);
 
     from = lwt_chan(chsz);
-    printf("chsz size: %d---------------\n", chsz);
+    printc("chsz size: %d---------------\n", chsz);
     assert(from);
     t = lwt_create_chan(fn_async_steam, from);
     assert(lwt_info(LWT_INFO_NTHD_RUNNABLE) == 2);
@@ -451,7 +456,7 @@ void test_perf_async_steam(int chsz)
     for (i = 0; i < ITER; i++)
         assert(i + 1 == (int)lwt_rcv(from));
     rdtscll(end);
-    printf("[PERF] %5lld <- asynchronous snd->rcv (buffer size %d)\n",
+    printc("[PERF] %5lld <- asynchronous snd->rcv (buffer size %d)\n",
            (end - start) / (ITER * 2), chsz);
     lwt_join(t);
 }
@@ -483,7 +488,7 @@ void test_grpwait(int chsz, int grpsz)
     int i;
     lwt_cgrp_t g;
 
-    printf("[TEST] group wait (channel buffer size %d, grpsz %d)\n",
+    printc("[TEST] group wait (channel buffer size %d, grpsz %d)\n",
            chsz, grpsz);
     g = lwt_cgrp();
     assert(g);
@@ -533,6 +538,8 @@ void test_grpwait(int chsz, int grpsz)
 
 int test_file(void)
 {
+    __initiate();
+    printd("--------------------------\n");
     test_perf();
     test_perf_channels(0);
     test_perf_async_steam(ITER / 10 < 100 ? ITER / 10 : 100);
@@ -558,10 +565,10 @@ cos_init(void)
 	sl_init();
 
 //	test_yields();
-	test_blocking_directed_yield();
+// 	test_blocking_directed_yield();
 
-	sl_sched_loop();
-
+// 	sl_sched_loop();
+    test_file();
 	assert(0);
 
 	return;

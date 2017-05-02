@@ -51,7 +51,7 @@ morecore(uint nu)
   //   nu = 4096;
   p = cos_page_bump_alloc(ci);
 
-  if ((nu / 4096) > 0)
+  if (((nu * sizeof(Header)) / 4096) > 0)
   {
     k = nu / 4096;
     for (i = 0; i < k; ++ i)
