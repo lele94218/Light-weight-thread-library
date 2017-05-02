@@ -132,7 +132,6 @@ lwt_create(lwt_fn_t fn, void * data, lwt_flags_t flags)
     uint _sp;
     
     if (unlikely(!list_head_empty(&recycle_queue))) {
-        printc("---------1-----------\n");
         /* recycle queue is not empty */
         next_thread = list_head_first_d(&recycle_queue, struct _lwt_t);
         list_rem_d(next_thread);
@@ -140,7 +139,6 @@ lwt_create(lwt_fn_t fn, void * data, lwt_flags_t flags)
     }
     else
     {
-        printc("---------2-----------\n");
         /* Create new thread */
         next_thread = (lwt_t) umalloc (sizeof(struct _lwt_t));
         _sp = (uint) umalloc(MAX_STACK_SIZE);
