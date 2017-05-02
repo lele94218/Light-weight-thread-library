@@ -20,7 +20,7 @@
 #define debug_print(str) (PRINT_FN(str __FILE__ ":" STR(__LINE__) ".\n"))
 #define BUG() do { debug_print("BUG @ "); *((int *)0) = 0; } while (0);
 #define SPIN(iters) do { if (iters > 0) { for (; iters > 0 ; iters -- ) ; } else { while (1) ; } } while (0)
-
+#define ITER 5
 struct cos_compinfo *ci;
 
 static void
@@ -116,7 +116,7 @@ test_lwt(int a)
 #define rdtscll(val) __asm__ __volatile__("rdtsc" \
                                           : "=A"(val))
 
-#define ITER 1000
+
 /*
  * My output on an Intel Core i5-2520M CPU @ 2.50GHz:
  *
@@ -520,15 +520,16 @@ int test_file(void)
 {
     __initiate();
     printd("--------------------------\n");
-    test_perf();
-    test_perf_channels(0);
-    test_perf_async_steam(ITER / 10 < 100 ? ITER / 10 : 100);
-    test_crt_join_sched();
-    test_multisend(0);
-    printf("multisend with 0 complete!!!!!!%d!!!!\n",5);
-    test_multisend(ITER / 10 < 100 ? ITER / 10 : 100);
-    printc("multisend with specific number complete!!!!!!!!!!\n");
-    test_grpwait(0, 15);
+    // test_perf();
+    // test_perf_channels(0);
+    // test_perf_async_steam(ITER / 10 < 100 ? ITER / 10 : 100);
+    // test_crt_join_sched();
+    // test_multisend(0);
+    // test_multisend(ITER / 10 < 100 ? ITER / 10 : 100);
+    // printc("the third function has passed!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+    printc("the second function started!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+    test_grpwait(0, 3);
+    printc("the second function has passed!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
     // test_grpwait(15, 15);
 
     return 0;
