@@ -21,7 +21,7 @@
 #define BUG() do { debug_print("BUG @ "); *((int *)0) = 0; } while (0);
 #define SPIN(iters) do { if (iters > 0) { for (; iters > 0 ; iters -- ) ; } else { while (1) ; } } while (0)
 
-#define ITER 2
+#define ITER 1000
 struct cos_compinfo *ci;
 
 static void
@@ -483,9 +483,7 @@ void test_grpwait(int chsz, int grpsz)
         lwt_cgrp_add(g, cs[i]);
     }
     lwt_yield(NULL);
-    printc("0----------------------------------------------\n");
     assert(lwt_cgrp_free(g) == -1);
-    printc("1----------------------------------------------\n");
     /**
      * Q: why don't we iterate through all of the data here?
      *
@@ -506,7 +504,6 @@ void test_grpwait(int chsz, int grpsz)
         r = (int)lwt_rcv(c);
         assert(r == (int)lwt_chan_mark_get(c));
     }
-    printf("\n2----------------------------------------------\n");
     for (i = 0; i < grpsz; i++)
     {
         lwt_cgrp_rem(g, cs[i]);
@@ -522,17 +519,14 @@ int test_file(void)
 {
     __initiate();
     printd("--------------------------\n");
-    // test_perf();
-    // test_perf_channels(0);
-    // test_perf_async_steam(ITER / 10 < 100 ? ITER / 10 : 100);
-    // test_crt_join_sched();
-    // test_multisend(0);
-    // test_multisend(ITER / 10 < 100 ? ITER / 10 : 100);
-    // printc("the third function has passed!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
-    printc("the second function started!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
-    test_grpwait(0, 1);
-    printc("the second function has passed!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
-    // test_grpwait(15, 15);
+    test_perf();
+    test_perf_channels(0);
+    test_perf_async_steam(ITER / 10 < 100 ? ITER / 10 : 100);
+    test_crt_join_sched();
+    test_multisend(0);
+    test_multisend(ITER / 10 < 100 ? ITER / 10 : 100);
+    test_grpwait(0, 15);
+    test_grpwait(15, 15);
 
     return 0;
 }
@@ -567,9 +561,9 @@ cos_init(void)
 	cos_defcompinfo_init();
 	sl_init();
 
-	// test_yields();
-	// test_blocking_directed_yield();
-	// sl_sched_loop();
+	test_yields();
+	test_blocking_directed_yield();
+	sl_sched_loop();
     test_file();
 	assert(0);
 

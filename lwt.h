@@ -8,7 +8,7 @@
 
 /* turn this on will enable error check for user input */
 #ifdef DEBUG
-#define printd(format, ...)  printc("%s Line: %05d: " format, __FILE__, __LINE__, ## __VA_ARGS__)
+#define printd(format, ...)  //printc("%s Line: %05d: " format, __FILE__, __LINE__, ## __VA_ARGS__)
 #else
 #define printd(format, ...)
 #endif
