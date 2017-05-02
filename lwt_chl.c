@@ -73,7 +73,7 @@ lwt_chan_deref (lwt_chan_t chan)
     if (chan->snd_cnt == 0 && chan->receiver == NULL)
     {
         printd("channel %d has been freed from memory.\n", chan->chan_id);
-        free(chan);
+        ufree(chan);
     }
 }
 /* block the thread and yield */
@@ -279,7 +279,7 @@ lwt_cgrp_free (lwt_cgrp_t cgrp)
     {
         node->cgroup = NULL;
     }
-    free(cgrp);
+    ufree(cgrp);
     printd("a group has been freed! \n");
     return 0;
 }

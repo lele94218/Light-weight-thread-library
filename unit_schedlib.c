@@ -21,6 +21,7 @@
 #define BUG() do { debug_print("BUG @ "); *((int *)0) = 0; } while (0);
 #define SPIN(iters) do { if (iters > 0) { for (; iters > 0 ; iters -- ) ; } else { while (1) ; } } while (0)
 
+#define ITER 1000
 struct cos_compinfo *ci;
 
 static void
@@ -116,7 +117,7 @@ test_lwt(int a)
 #define rdtscll(val) __asm__ __volatile__("rdtsc" \
                                           : "=A"(val))
 
-#define ITER 1000
+
 /*
  * My output on an Intel Core i5-2520M CPU @ 2.50GHz:
  *
@@ -453,7 +454,7 @@ fn_grpwait(lwt_chan_t c)
             int j;
 
             for (j = 0; j < (i % 8); j++)
-                lwt_yield(LWT_NULL);
+                lwt_yield(NULL);
         }
         lwt_snd(c, (void *)lwt_id(lwt_current()));
     }
@@ -483,7 +484,6 @@ void test_grpwait(int chsz, int grpsz)
     }
     lwt_yield(NULL);
     assert(lwt_cgrp_free(g) == -1);
-
     /**
      * Q: why don't we iterate through all of the data here?
      *
@@ -504,7 +504,6 @@ void test_grpwait(int chsz, int grpsz)
         r = (int)lwt_rcv(c);
         assert(r == (int)lwt_chan_mark_get(c));
     }
-    printf("----------------------------------------------\n");
     for (i = 0; i < grpsz; i++)
     {
         lwt_cgrp_rem(g, cs[i]);
@@ -525,11 +524,9 @@ int test_file(void)
     test_perf_async_steam(ITER / 10 < 100 ? ITER / 10 : 100);
     test_crt_join_sched();
     test_multisend(0);
-    printf("multisend with 0 complete!!!!!!%d!!!!\n",5);
     test_multisend(ITER / 10 < 100 ? ITER / 10 : 100);
-    printc("multisend with specific number complete!!!!!!!!!!\n");
     test_grpwait(0, 15);
-    // test_grpwait(15, 15);
+    test_grpwait(15, 15);
 
     return 0;
 }
@@ -564,9 +561,9 @@ cos_init(void)
 	cos_defcompinfo_init();
 	sl_init();
 
-	// test_yields();
-	// test_blocking_directed_yield();
-	// sl_sched_loop();
+	test_yields();
+	test_blocking_directed_yield();
+	sl_sched_loop();
     test_file();
 	assert(0);
 
