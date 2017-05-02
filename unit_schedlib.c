@@ -521,12 +521,14 @@ int test_file(void)
     __initiate();
     printd("--------------------------\n");
     test_perf();
-    // test_perf_channels(0);
-    // test_perf_async_steam(ITER / 10 < 100 ? ITER / 10 : 100);
-    // test_crt_join_sched();
-    // test_multisend(0);
-    // test_multisend(ITER / 10 < 100 ? ITER / 10 : 100);
-    // test_grpwait(0, 15);
+    test_perf_channels(0);
+    test_perf_async_steam(ITER / 10 < 100 ? ITER / 10 : 100);
+    test_crt_join_sched();
+    test_multisend(0);
+    printf("multisend with 0 complete!!!!!!%d!!!!\n",5);
+    test_multisend(ITER / 10 < 100 ? ITER / 10 : 100);
+    printc("multisend with specific number complete!!!!!!!!!!\n");
+    test_grpwait(0, 15);
     // test_grpwait(15, 15);
 
     return 0;
