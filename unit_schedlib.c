@@ -20,7 +20,8 @@
 #define debug_print(str) (PRINT_FN(str __FILE__ ":" STR(__LINE__) ".\n"))
 #define BUG() do { debug_print("BUG @ "); *((int *)0) = 0; } while (0);
 #define SPIN(iters) do { if (iters > 0) { for (; iters > 0 ; iters -- ) ; } else { while (1) ; } } while (0)
-#define ITER 5
+
+#define ITER 2
 struct cos_compinfo *ci;
 
 static void
@@ -453,7 +454,7 @@ fn_grpwait(lwt_chan_t c)
             int j;
 
             for (j = 0; j < (i % 8); j++)
-                lwt_yield(LWT_NULL);
+                lwt_yield(NULL);
         }
         lwt_snd(c, (void *)lwt_id(lwt_current()));
     }
@@ -482,8 +483,9 @@ void test_grpwait(int chsz, int grpsz)
         lwt_cgrp_add(g, cs[i]);
     }
     lwt_yield(NULL);
+    printc("0----------------------------------------------\n");
     assert(lwt_cgrp_free(g) == -1);
-
+    printc("1----------------------------------------------\n");
     /**
      * Q: why don't we iterate through all of the data here?
      *
@@ -504,7 +506,7 @@ void test_grpwait(int chsz, int grpsz)
         r = (int)lwt_rcv(c);
         assert(r == (int)lwt_chan_mark_get(c));
     }
-    printf("----------------------------------------------\n");
+    printf("\n2----------------------------------------------\n");
     for (i = 0; i < grpsz; i++)
     {
         lwt_cgrp_rem(g, cs[i]);
@@ -528,7 +530,7 @@ int test_file(void)
     // test_multisend(ITER / 10 < 100 ? ITER / 10 : 100);
     // printc("the third function has passed!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
     printc("the second function started!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
-    test_grpwait(0, 3);
+    test_grpwait(0, 1);
     printc("the second function has passed!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
     // test_grpwait(15, 15);
 
