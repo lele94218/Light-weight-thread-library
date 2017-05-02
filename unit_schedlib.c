@@ -113,30 +113,10 @@ test_lwt(int a)
 	}
 }
 
-void
-test_blocking_directed_yield(void)
-{
-	printc("begin test...\n");
-	// struct sl_thd          *low, *high;
-	// union sched_param       sph = {.c = {.type = SCHEDP_PRIO, .value = 5}};
-	// union sched_param       spl = {.c = {.type = SCHEDP_PRIO, .value = 10}};
-
-	// low  = sl_thd_alloc(test_low, NULL);
-	// high = sl_thd_alloc(test_high, low);
-	// sl_thd_param_set(low, spl.v);
-	// sl_thd_param_set(high, sph.v);
-	int a = 1;
-	int b = 2;
-	// lwt_kthd_create(test_lwt, (void *)a, NULL);
-	// lwt_kthd_create(test_lwt, (void *)b, NULL);
-
-
-}
-
 #define rdtscll(val) __asm__ __volatile__("rdtsc" \
                                           : "=A"(val))
 
-#define ITER 100
+#define ITER 1000
 /*
  * My output on an Intel Core i5-2520M CPU @ 2.50GHz:
  *
@@ -541,16 +521,34 @@ int test_file(void)
     __initiate();
     printd("--------------------------\n");
     test_perf();
-    test_perf_channels(0);
-    test_perf_async_steam(ITER / 10 < 100 ? ITER / 10 : 100);
-    test_crt_join_sched();
-    test_multisend(0);
-    test_multisend(ITER / 10 < 100 ? ITER / 10 : 100);
-    test_grpwait(0, 15);
-    /* bugs if test test_grpwait(100, 100) */
-    test_grpwait(15, 15);
+    // test_perf_channels(0);
+    // test_perf_async_steam(ITER / 10 < 100 ? ITER / 10 : 100);
+    // test_crt_join_sched();
+    // test_multisend(0);
+    // test_multisend(ITER / 10 < 100 ? ITER / 10 : 100);
+    // test_grpwait(0, 15);
+    // test_grpwait(15, 15);
 
     return 0;
+}
+
+
+void
+test_blocking_directed_yield(void)
+{
+	printc("begin test...\n");
+	// struct sl_thd          *low, *high;
+	// union sched_param       sph = {.c = {.type = SCHEDP_PRIO, .value = 5}};
+	// union sched_param       spl = {.c = {.type = SCHEDP_PRIO, .value = 10}};
+
+	// low  = sl_thd_alloc(test_low, NULL);
+	// high = sl_thd_alloc(test_high, low);
+	// sl_thd_param_set(low, spl.v);
+	// sl_thd_param_set(high, sph.v);
+	// lwt_kthd_create(test_lwt, NULL);
+	// lwt_kthd_create(test_lwt, NULL);
+
+
 }
 
 void
@@ -564,10 +562,9 @@ cos_init(void)
 	cos_defcompinfo_init();
 	sl_init();
 
-//	test_yields();
-// 	test_blocking_directed_yield();
-
-// 	sl_sched_loop();
+	// test_yields();
+	// test_blocking_directed_yield();
+	// sl_sched_loop();
     test_file();
 	assert(0);
 

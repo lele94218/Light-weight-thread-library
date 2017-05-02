@@ -15,7 +15,7 @@
 
 
 /* define size of stack for created thread */
-#define MAX_STACK_SIZE (1024 * 8)
+#define MAX_STACK_SIZE (100 * 1024 * 8)
 
 /* define NULL pointer */
 #define LWT_NULL NULL
@@ -226,7 +226,7 @@ lwt_chan_t lwt_cgrp_wait (lwt_cgrp_t cgrp);
 void lwt_chan_mark_set(lwt_chan_t, void *);
 void *lwt_chan_mark_get(lwt_chan_t);
 
-int lwt_kthd_create(lwt_fn_t fn, void * data, lwt_chan_t c);
+int lwt_kthd_create(lwt_fn_t fn, lwt_chan_t c);
 
 
 

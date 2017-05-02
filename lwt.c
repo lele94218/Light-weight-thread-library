@@ -132,6 +132,7 @@ lwt_create(lwt_fn_t fn, void * data, lwt_flags_t flags)
     uint _sp;
     
     if (unlikely(!list_head_empty(&recycle_queue))) {
+        printc("---------1-----------\n");
         /* recycle queue is not empty */
         next_thread = list_head_first_d(&recycle_queue, struct _lwt_t);
         list_rem_d(next_thread);
@@ -139,6 +140,7 @@ lwt_create(lwt_fn_t fn, void * data, lwt_flags_t flags)
     }
     else
     {
+        printc("---------2-----------\n");
         /* Create new thread */
         next_thread = (lwt_t) umalloc (sizeof(struct _lwt_t));
         _sp = (uint) umalloc(MAX_STACK_SIZE);
@@ -150,23 +152,17 @@ lwt_create(lwt_fn_t fn, void * data, lwt_flags_t flags)
     __init_thread(next_thread);
     next_thread->parent = current_thread;
     
-    printd("-------------init stack-------------\n");
     /* Init funciton info */
     _sp -= (sizeof(uint));
-    printd("-------------1-------------\n");
     *((uint *)_sp) = (uint)data;
-    printd("-------------2-------------\n");
     _sp -= (sizeof(uint));
-    printd("-------------3-------------\n");
     *((uint *)_sp) = (uint)fn;
-    printd("-------------4-------------\n");
     _sp -= (sizeof(uint));
 
     
     next_thread->context.sp = _sp;
     next_thread->context.ip = (uint) __lwt_trampoline;
     
-    printd("-------------stacked-------------\n");
     if (flags & LWT_NOJOIN) {
         next_thread->nojoin = 1;
     }
