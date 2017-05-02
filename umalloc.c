@@ -1,6 +1,5 @@
 #include "lwt.h"
 
-#include "stdlib.h"
 // Memory allocator by Kernighan and Ritchie,
 // The C programming Language, 2nd ed.  Section 8.7.
 
@@ -50,7 +49,7 @@ morecore(uint nu)
 
   if(nu < 4096)
     nu = 4096;
-  P = malloc(nu*sizeof(Header));
+  p = malloc(nu * sizeof(Header));
 
   // p = cos_page_bump_alloc(ci);
   // if (((nu * sizeof(Header)) / 4096) > 0)

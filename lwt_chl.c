@@ -337,7 +337,7 @@ lwt_chan_mark_get(lwt_chan_t chan)
 int lwt_kthd_create(lwt_fn_t fn, lwt_chan_t c)
 {  
     
-    printc("----------\n");
+    printd("----------\n");
     // struct sl_thd * curr_kthd = sl_thd_alloc((cos_thd_fn_t) lwt_yield, NULL);
     // lwt_init_cap(curr_kthd->lwt_cap);
     // _lwt_t __thread = lwt_create(fn, (void *)c, 0);

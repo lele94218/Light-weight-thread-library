@@ -1,10 +1,12 @@
 #ifndef LWT_H
 #define LWT_H
 
+#include <stdlib.h>
+#include <stdio.h>
 #include "lwt_list.h"
 
-#include "sl.h"
-#include <cos_defkernel_api.h>
+// #include "sl.h"
+// #include <cos_defkernel_api.h>
 
 /* turn this on will enable error check for user input */
 #ifdef DEBUG
@@ -16,6 +18,7 @@
 
 /* define size of stack for created thread */
 #define MAX_STACK_SIZE (100 * 1024 * 8)
+
 
 /* define NULL pointer */
 #define LWT_NULL NULL

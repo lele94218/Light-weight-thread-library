@@ -1,8 +1,7 @@
-#include <lwt.h>
-#include <umalloc.h>
-
+#include "lwt.h"
+#include "umalloc.h"
 /* --------------- initialization function --------------- */
-// void __initiate (void) __attribute__((constructor));
+void __initiate (void) __attribute__((constructor));
 
 
 
@@ -104,7 +103,7 @@ __initiate()
     current_thread->state = LWT_RUNNING;
     
     list_head_append_d(&run_queue, current_thread);
-    printc("initialization complete\n");
+    printd("initialization complete\n");
     
 }
 
@@ -112,9 +111,9 @@ __initiate()
 void
 lwt_init_cap(struct _lwt_cap * lwt_cap)
 {
-    printc("-------2.2-------\n");
+    printd("-------2.2-------\n");
     lwt_cap = umalloc(sizeof(struct _lwt_cap));
-    printc("-------2.3-------\n");
+    printd("-------2.3-------\n");
     lwt_cap->block_counter = 0;
     lwt_cap->lwt_counter = 0;
     lwt_cap->zombie_counter = 0;
@@ -130,7 +129,6 @@ lwt_create(lwt_fn_t fn, void * data, lwt_flags_t flags)
 {
     lwt_t next_thread;
     uint _sp;
-    
     if (unlikely(!list_head_empty(&recycle_queue))) {
         /* recycle queue is not empty */
         next_thread = list_head_first_d(&recycle_queue, struct _lwt_t);
