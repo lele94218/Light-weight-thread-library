@@ -1,5 +1,6 @@
 #include "lwt.h"
 
+#include "stdlib.h"
 // Memory allocator by Kernighan and Ritchie,
 // The C programming Language, 2nd ed.  Section 8.7.
 
@@ -47,18 +48,19 @@ morecore(uint nu)
   Header *hp;
   int i, k;
 
-  // if(nu < 4096)
-  //   nu = 4096;
-  p = cos_page_bump_alloc(ci);
+  if(nu < 4096)
+    nu = 4096;
+  P = malloc(nu*sizeof(Header));
 
-  if (((nu * sizeof(Header)) / 4096) > 0)
-  {
-    k = (nu * sizeof(Header)) / 4096;
-    for (i = 0; i < k; ++ i)
-    {
-      cos_page_bump_alloc(ci);
-    }
-  }
+  // p = cos_page_bump_alloc(ci);
+  // if (((nu * sizeof(Header)) / 4096) > 0)
+  // {
+  //   k = (nu * sizeof(Header)) / 4096;
+  //   for (i = 0; i < k; ++ i)
+  //   {
+  //     cos_page_bump_alloc(ci);
+  //   }
+  // }
 
   if(p == (char*)-1)
     return 0;
