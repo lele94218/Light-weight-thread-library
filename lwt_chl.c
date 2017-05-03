@@ -337,7 +337,7 @@ void lwt_kthd_trampline(void * ptr)
     while(1)
     {
         lwt_t thd = list_head_first_d(current_run_queue(), struct _lwt_t);
-        if (thd)
+        if (list_head_empty(current_run_queue()))
         {
             printc("has lwt in run queue, current kthd: %d!\n", current_kthd);
             print_queue_content(LWT_INFO_NTHD_RUNNABLE);
@@ -349,7 +349,7 @@ void lwt_kthd_trampline(void * ptr)
         }
         else
         {
-            printc("block kthd!\n");
+            printc("block kthd: %d!\n", current_kthd);
             /* block kthd */
             sl_thd_block(current_kthd);
             sl_thd_yield(NULL);

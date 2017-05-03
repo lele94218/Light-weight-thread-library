@@ -44,7 +44,11 @@ __lwt_schedule()
 {
     lwt_t old_thread = lwt_current();
     lwt_t new_thread = list_head_first_d(current_run_queue(), struct _lwt_t);
-    if (!new_thread) new_thread = kthds[current_kthd].main_thread;
+    if (list_head_empty(current_run_queue()))
+    {
+        printc("no thread in run queue!\n");
+        new_thread = kthds[current_kthd].main_thread;
+    }
     printd("thread %d start executing from reschedule\n", new_thread->lwt_id);
     new_thread->state = LWT_RUNNING;
     kthds[current_kthd].current_thread = new_thread;
