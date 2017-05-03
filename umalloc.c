@@ -45,12 +45,12 @@ morecore(uint nu)
 {
   char *p;
   Header *hp;
-  int i, k;
 
   if(nu < 4096)
     nu = 4096;
   p = malloc(nu * sizeof(Header));
 
+  //int i, k;
   // p = cos_page_bump_alloc(ci);
   // if (((nu * sizeof(Header)) / 4096) > 0)
   // {

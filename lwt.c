@@ -3,17 +3,12 @@
 /* --------------- initialization function --------------- */
 void __initiate (void) __attribute__((constructor));
 
+struct _kthd_info kthds[5];
+int current_kthd=0;
 
-
-/* four queues, one for thread running, one for blocking, one for zombies, one for recycle */
-struct list_head run_queue;
-struct list_head recycle_queue;
-
-
-/* identify threads */
-lwt_t current_thread;
-lwt_t old_thread;
-
+// /* four queues, one for thread running, one for blocking, one for zombies, one for recycle */
+// struct list_head run_queue;
+// struct list_head recycle_queue;
 
 
 /* --------------- internal function declarations --------------- */
@@ -21,6 +16,7 @@ void __lwt_schedule (void);
 void * __lwt_trampoline(lwt_fn_t, void *);
 void __initiate(void);
 void __print_a_thread_queue(struct list_head *);
+void init_kthd(struct _kthd_info * kthd);
 
 
 /* --------------- inline function definition --------------- */
@@ -29,7 +25,7 @@ void __print_a_thread_queue(struct list_head *);
 static inline void
 __init_thread(lwt_t created_thread)
 {
-    created_thread->lwt_id = lwt_counter++;
+    created_thread->lwt_id = kthds[current_kthd].lwt_counter++;
     created_thread->state = LWT_RUNNING;
     created_thread->parent = NULL;
     created_thread->message_data = NULL;
@@ -37,6 +33,7 @@ __init_thread(lwt_t created_thread)
     /* NOTE: here snd_cnt is manually changed */
     created_thread->chl->snd_cnt += 1;
     created_thread->nojoin = 0;
+    created_thread->kthd_index=current_kthd;
 }
 
 
@@ -79,11 +76,12 @@ __lwt_dispatch(struct _lwt_context * curr, struct _lwt_context * next)
 inline void
 __lwt_schedule ()
 {
-    old_thread = current_thread;
-    current_thread = list_head_first_d(&run_queue, struct _lwt_t);
-    printd("thread %d start executing from reschedule\n", current_thread->lwt_id);
-    current_thread->state = LWT_RUNNING;
-    __lwt_dispatch(&(old_thread->context), &(current_thread->context));
+    lwt_t old_thread = lwt_current();
+    lwt_t new_thread = list_head_first_d(current_run_queue(), struct _lwt_t);
+    printd("thread %d start executing from reschedule\n", new_thread->lwt_id);
+    new_thread->state = LWT_RUNNING;
+    kthds[current_kthd].current_thread=new_thread;
+    __lwt_dispatch(&(old_thread->context), &(new_thread->context));
 }
 
 
@@ -91,36 +89,27 @@ __lwt_schedule ()
 void
 __initiate()
 {
+    init_kthd(&(kthds[current_kthd]));
+    kthds[current_kthd].current_thread = (lwt_t) umalloc (sizeof(struct _lwt_t));
+    __init_thread(kthds[current_kthd].current_thread);
+    kthds[current_kthd].current_thread->state = LWT_RUNNING;
     
-    /* initialize run_queue */
-    list_head_init(&run_queue);
-    
-    /* initialize recycle queue */
-    list_head_init(&recycle_queue);
-    
-    current_thread = (lwt_t) umalloc (sizeof(struct _lwt_t));
-    __init_thread(current_thread);
-    current_thread->state = LWT_RUNNING;
-    
-    list_head_append_d(&run_queue, current_thread);
+    list_head_append_d(current_run_queue(), lwt_current());
     printd("initialization complete\n");
-    
 }
 
 
 void
-lwt_init_cap(struct _lwt_cap * lwt_cap)
+init_kthd(struct _kthd_info * kthd)
 {
-    printd("-------2.2-------\n");
-    lwt_cap = umalloc(sizeof(struct _lwt_cap));
-    printd("-------2.3-------\n");
-    lwt_cap->block_counter = 0;
-    lwt_cap->lwt_counter = 0;
-    lwt_cap->zombie_counter = 0;
-    lwt_cap->nrcving = 0;
-    lwt_cap->nsnding = 0;
-    list_head_init(&lwt_cap->run_queue);
-    list_head_init(&lwt_cap->recycle_queue);
+    kthd->chan_counter = 0;
+    kthd->lwt_counter = 0;
+    kthd->block_counter = 0;
+    kthd->zombie_counter = 0;
+    kthd->nrcving = 0;
+    kthd->nsnding = 0;
+    list_head_init(&kthd->run_queue);
+    list_head_init(&kthd->recycle_queue);
 }
 
 /* create a thread, return its lwt_t pointer */
@@ -129,9 +118,9 @@ lwt_create(lwt_fn_t fn, void * data, lwt_flags_t flags)
 {
     lwt_t next_thread;
     uint _sp;
-    if (unlikely(!list_head_empty(&recycle_queue))) {
+    if (unlikely(!list_head_empty(current_recycle_queue()))) {
         /* recycle queue is not empty */
-        next_thread = list_head_first_d(&recycle_queue, struct _lwt_t);
+        next_thread = list_head_first_d(current_recycle_queue(), struct _lwt_t);
         list_rem_d(next_thread);
         _sp = next_thread->init_sp;
     }
@@ -146,7 +135,7 @@ lwt_create(lwt_fn_t fn, void * data, lwt_flags_t flags)
     
     /* Init other data */
     __init_thread(next_thread);
-    next_thread->parent = current_thread;
+    next_thread->parent = lwt_current();
     
     /* Init funciton info */
     _sp -= (sizeof(uint));
@@ -163,9 +152,9 @@ lwt_create(lwt_fn_t fn, void * data, lwt_flags_t flags)
         next_thread->nojoin = 1;
     }
     
-    printd("thread: %d has created thread: %d\n", current_thread->lwt_id, next_thread->lwt_id);
+    printd("thread: %d has created thread: %d\n", lwt_current()->lwt_id, next_thread->lwt_id);
     
-    list_head_add_d(&run_queue, next_thread);
+    list_head_add_d(current_run_queue(), next_thread);
     
     return next_thread;
 }
@@ -174,16 +163,18 @@ lwt_create(lwt_fn_t fn, void * data, lwt_flags_t flags)
 void
 lwt_die(void * message)
 {
+    lwt_t current_thread=lwt_current();
+
     printd("die function start executing for thread %d.\n", current_thread->lwt_id);
-    zombie_counter++;
+    kthds[current_kthd].zombie_counter++;
     current_thread->message_data = message;
     lwt_snd(current_thread->chl, message);
     current_thread->state = LWT_ZOMBIES;
-    zombie_counter--;
+    kthds[current_kthd].zombie_counter--;
     list_rem_d(current_thread);
-    list_head_add_d(&recycle_queue, current_thread);
+    list_head_add_d(current_recycle_queue(), current_thread);
     printd("removed dead thread %d to zombie queue\n", current_thread->lwt_id);
-    /* Below is the old code for assuming any thread can collect others
+    /* Below is the old code, assuming any thread can collect others, not adapted to composite yet
     if (unlikely((long int)current_thread->parent))
     {
         lwt_snd(current_thread->chl, message);
@@ -212,7 +203,7 @@ void *
 __lwt_trampoline(lwt_fn_t fn, void * data)
 {
     void * return_message = fn(data);
-    printd("thread %d ready to die, with last word %d\n", current_thread->lwt_id, (int)return_message);
+    printd("thread %d ready to die, with last word %d\n", lwt_current()->lwt_id, (int)return_message);
     lwt_die(return_message);
     return NULL;
 }
@@ -221,6 +212,7 @@ __lwt_trampoline(lwt_fn_t fn, void * data)
 int
 lwt_yield(lwt_t yield_to)
 {
+    lwt_t current_thread=lwt_current();
     /* yield to itself */
     if (yield_to == current_thread || (yield_to && yield_to->state != LWT_RUNNABLE && yield_to->state != LWT_RUNNING))
     {
@@ -231,7 +223,7 @@ lwt_yield(lwt_t yield_to)
     if (likely((long int)yield_to))
     {
         list_rem_d(yield_to);
-        list_head_append_d(&run_queue, yield_to);
+        list_head_append_d(current_run_queue(), yield_to);
     }
     /* yield to NULL */
     else
@@ -239,7 +231,7 @@ lwt_yield(lwt_t yield_to)
         if(current_thread->state == LWT_RUNNABLE || current_thread->state == LWT_RUNNING)
         {
             list_rem_d(current_thread);
-            list_head_add_d(&run_queue, current_thread);
+            list_head_add_d(current_run_queue(), current_thread);
         }
     }
     __lwt_schedule();
@@ -251,13 +243,12 @@ lwt_yield(lwt_t yield_to)
 void *
 lwt_join(lwt_t thread_to_wait)
 {
-    
-    if(current_thread!=thread_to_wait->parent || thread_to_wait->nojoin)
+    if(lwt_current()!=thread_to_wait->parent || thread_to_wait->nojoin)
     {
         printd("error: invalid thread to wait!\n");
         return NULL;
     }
-    printd("thread %d starts collect last word of child thread %d.\n", current_thread->lwt_id, thread_to_wait->lwt_id);
+    printd("thread %d starts collect last word of child thread %d.\n", lwt_current()->lwt_id, thread_to_wait->lwt_id);
     void * data_received = lwt_rcv(thread_to_wait->chl);
     lwt_yield(thread_to_wait);
     /* below code are assuming any thread can join another thread
@@ -276,7 +267,19 @@ lwt_join(lwt_t thread_to_wait)
 lwt_t
 lwt_current()
 {
-    return current_thread;
+    return kthds[current_kthd].current_thread;
+}
+
+struct list_head *
+current_run_queue()
+{
+    return &(kthds[current_kthd].run_queue);
+}
+
+struct list_head *
+current_recycle_queue()
+{
+    return &(kthds[current_kthd].recycle_queue);
 }
 
 /* return the id of a thread */

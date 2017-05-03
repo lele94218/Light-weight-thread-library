@@ -6,7 +6,7 @@
 
 #define rdtscll(val) __asm__ __volatile__("rdtsc" : "=A" (val))
 
-#define ITER 3
+#define ITER 10000
 /*
  * My output on an Intel Core i5-2520M CPU @ 2.50GHz:
  *
@@ -92,6 +92,7 @@ fn_nested_joins(void *d)
     }
     chld = lwt_create(fn_nested_joins, (void*)1, 0);
     lwt_join(chld);
+    return d;
 }
 
 volatile int sched[2] = {0, 0};
@@ -116,12 +117,13 @@ fn_sequence(void *d)
 void *
 fn_join(void *d)
 {
-    lwt_t t = (lwt_t)d;
+    //lwt_t t = (lwt_t)d;
     void *r;
     
     r = lwt_join(d);
     printf("return value is %d \n", (int)r);
     assert(r != (void*)0x37337);
+    return d;
 }
 
 void
@@ -331,6 +333,7 @@ fn_grpwait(lwt_chan_t c)
         }
         lwt_snd(c, (void*)lwt_id(lwt_current()));
     }
+    return 0;
 }
 
 #define GRPSZ 3
@@ -412,7 +415,6 @@ main(void)
 
     test_grpwait(0, 3);
     test_grpwait(3, 3);
-//test_grpwait(2, 1);
     
     return 0;
 }

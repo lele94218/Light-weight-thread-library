@@ -1,14 +1,17 @@
 #include "lwt.h"
 #include "umalloc.h"
 
-int nrcving = 0;
-int nsnding = 0;
-int chan_counter = 0;
+extern struct _kthd_info kthds[];
+extern int current_kthd;
 
-/* used for assigning thread and channel id */
-int lwt_counter = 0;
-int zombie_counter = 0;
-int block_counter = 0;
+// int nrcving = 0;
+// int nsnding = 0;
+// int chan_counter = 0;
+
+// /* used for assigning thread and channel id */
+// int lwt_counter = 0;
+// int zombie_counter = 0;
+// int block_counter = 0;
 
 /* --------------- Thread communication function implementation, channelling --------------- */
 
@@ -24,14 +27,13 @@ int __get_queue_size(struct list_head *);
 static void inline
 __init_chan(lwt_chan_t chan, int size)
 {
-
     chan->size = size;
     chan->buffer.data_buffer = umalloc(size * sizeof(uint));
     chan->buffer.tail = chan->buffer.head = 0;
     
-    chan->receiver = current_thread;
+    chan->receiver = lwt_current();
     chan->snd_cnt = 0;
-    chan->chan_id = chan_counter++;
+    chan->chan_id = kthds[current_kthd].chan_counter++;
     list_head_init(&(chan->sender_queue));
 }
 
@@ -41,7 +43,7 @@ lwt_create_chan(lwt_chan_fn_t fn, lwt_chan_t chan)
 {
     lwt_t created_thread = lwt_create((void *)fn, (void *)chan, 0);
     chan->snd_cnt += 1;
-    printd("thread %d has created thread %d with channel %d for user.\n", current_thread->lwt_id, created_thread->lwt_id,chan->chan_id);
+    printd("thread %d has created thread %d with channel %d for user.\n", lwt_current()->lwt_id, created_thread->lwt_id,chan->chan_id);
     return created_thread;
 }
 
@@ -52,7 +54,7 @@ lwt_chan(int size)
     lwt_chan_t chan;
     chan = (lwt_chan_t)umalloc(sizeof(struct _lwt_channel));
     __init_chan(chan, size);
-    printd("thread %d has created channel %d.\n", current_thread->lwt_id, chan->chan_id);
+    printd("thread %d has created channel %d.\n", lwt_current()->lwt_id, chan->chan_id);
     return chan;
 }
 
@@ -60,56 +62,58 @@ lwt_chan(int size)
 void
 lwt_chan_deref (lwt_chan_t chan)
 {
-    if (unlikely(chan->receiver == current_thread))
+    if (unlikely(chan->receiver == lwt_current()))
     {
         chan->receiver = NULL;
-        printd("thread %d is nolonger receiver of channel %d.\n", current_thread->lwt_id, chan->chan_id);
+        printd("thread %d is nolonger receiver of channel %d.\n", lwt_current()->lwt_id, chan->chan_id);
     }
     else
         chan->snd_cnt--;
     
     /* TODO: recycle channel buffer. */
-    printd("thread %d has de-ref channel %d, sender left: %d.\n", current_thread->lwt_id, chan->chan_id, chan->snd_cnt);
+    printd("thread %d has de-ref channel %d, sender left: %d.\n", lwt_current()->lwt_id, chan->chan_id, chan->snd_cnt);
     if (chan->snd_cnt == 0 && chan->receiver == NULL)
     {
         printd("channel %d has been freed from memory.\n", chan->chan_id);
         ufree(chan);
     }
 }
+
 /* block the thread and yield */
 void __block_thread(lwt_t thread, enum block_status block_for, lwt_chan_t chan)
 {
     list_rem_d(thread);
     if(block_for == BLOCKED_RECEIVING)
     {
-        nrcving++;
+        kthds[current_kthd].nrcving++;
     }
     else
     {
         list_head_add_d(&(chan->sender_queue), thread);
-        nsnding++;
+        kthds[current_kthd].nsnding++;
     }
     thread->state = LWT_BLOCKED;
     thread->block_for = block_for;
-    block_counter++;
+    kthds[current_kthd].block_counter++;
     lwt_yield(NULL);
 }
 
 void __resume_thread(lwt_t thread)
 {
-    nrcving -= thread->block_for == BLOCKED_RECEIVING ? 1 : 0;
-    nsnding -= thread->block_for == BLOCKED_SENDING ? 1 : 0;
+    kthds[current_kthd].nrcving -= thread->block_for == BLOCKED_RECEIVING ? 1 : 0;
+    kthds[current_kthd].nsnding -= thread->block_for == BLOCKED_SENDING ? 1 : 0;
     //if(thread->block_for==BLOCKED_SENDING) list_rem_d(thread);
     list_rem_d(thread);
     thread->state = LWT_RUNNABLE;
-    block_counter--;
-    list_head_append_d(&run_queue, thread);
+    kthds[current_kthd].block_counter--;
+    list_head_append_d(current_run_queue(), thread);
 }
 
 /* send data through a channel, block sender until receiver received the data */
 int
 lwt_snd(lwt_chan_t chan, void * data)
 {
+    lwt_t current_thread=lwt_current();
     if (unlikely(chan->receiver == NULL))
     {
         printd("thread %d has send data: %d to channel %d, but no receiver.\n", current_thread->lwt_id,(int)data, chan->chan_id);
@@ -155,7 +159,7 @@ void *
 lwt_rcv(lwt_chan_t chan)
 {
     void * result;
-    
+    lwt_t current_thread=lwt_current();
     /* receive data from buffer */
     if (chan->buffer.tail - chan->buffer.head != 0)
     {
@@ -288,6 +292,7 @@ lwt_cgrp_free (lwt_cgrp_t cgrp)
 lwt_chan_t
 lwt_cgrp_wait (lwt_cgrp_t cgrp)
 {
+    lwt_t current_thread=lwt_current();
     if (list_head_empty(&cgrp->chl_list)) {
         printd("thread %d is waiting for a group with no channel.\n", current_thread->lwt_id);
         return NULL;
@@ -308,8 +313,8 @@ lwt_cgrp_wait (lwt_cgrp_t cgrp)
         }
         list_rem_d(current_thread);
         list_head_add_d(&cgrp->wait_queue, current_thread);
-        block_counter++;
-        nrcving++;
+        kthds[current_kthd].block_counter++;
+        kthds[current_kthd].nrcving++;
         current_thread->state = LWT_BLOCKED;
         current_thread->block_for = BLOCKED_RECEIVING;
         lwt_yield(NULL);
@@ -397,17 +402,17 @@ lwt_info(enum lwt_info_t t)
 {
     switch (t) {
         case LWT_INFO_NTHD_RUNNABLE:
-            return __get_queue_size(&run_queue);
+            return __get_queue_size(current_run_queue());
         case LWT_INFO_NTHD_BLOCKED:
-            return block_counter;
+            return kthds[current_kthd].block_counter;
         case LWT_INFO_NTHD_ZOMBIES:
-            return zombie_counter;
+            return kthds[current_kthd].zombie_counter;
         case LWT_INFO_NTHD_RECYCLE:
-            return __get_queue_size(&recycle_queue);
+            return __get_queue_size(current_recycle_queue());
         case LWT_INFO_NSNDING:
-            return nsnding;
+            return kthds[current_kthd].nsnding;
         case LWT_INFO_NRCVING:
-            return nrcving;
+            return kthds[current_kthd].nrcving;
         default:
             printd("cannot identify printing instructions\n");
             return -1;
@@ -422,11 +427,11 @@ print_queue_content(enum lwt_info_t input)
     {
         case LWT_INFO_NTHD_RUNNABLE:
             printd("runnable queue showed as below: \n");
-            __print_a_thread_queue(&run_queue);
+            __print_a_thread_queue(current_run_queue());
             break;
         case LWT_INFO_NTHD_RECYCLE:
             printd("recycle queue showed as below: \n");
-            __print_a_thread_queue(&recycle_queue);
+            __print_a_thread_queue(current_recycle_queue());
             break;
         default:
             printd("cannot identify printing instructions\n");

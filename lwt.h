@@ -168,12 +168,14 @@ struct _lwt_t
     lwt_chan_t chl;
     lwt_chan_t now_rcving;
 
+    /* k thd information */
+    struct _lwt_cap * kthd;
 
     /* thread join state */
     int nojoin;
 
     /* kernel thread */
-    struct sl_thd * kthd;
+    int kthd_index;
 };
 
 typedef struct _lwt_t * lwt_t;
@@ -184,15 +186,17 @@ typedef void * (*lwt_fn_t)(void *);
 typedef void * (*lwt_chan_fn_t)(lwt_chan_t);
 
 
-struct _lwt_cap
+struct _kthd_info
 {
-    int block_counter;
+    /* below are counters for lwt and channel for a kthd */
     int lwt_counter;
+    int chan_counter;
+    /* below variables used to be global but now belongs to kthd */
+    int block_counter;
     int zombie_counter;
     int nrcving;
     int nsnding;
     lwt_t current_thread;
-    lwt_t old_thread;
     struct list_head run_queue;
     struct list_head recycle_queue;
 };
@@ -209,6 +213,8 @@ int lwt_yield(lwt_t strong_thread);
 lwt_t lwt_current();
 int lwt_id(lwt_t input_thread);
 lwt_t lwt_current();
+struct list_head * current_run_queue();
+struct list_head * current_recycle_queue();
 void lwt_init_cap(struct _lwt_cap *);
 
 /* --------------------------- Function declaration for lwt thread channel operation --------------------------- */
