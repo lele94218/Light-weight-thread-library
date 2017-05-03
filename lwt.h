@@ -1,16 +1,16 @@
 #ifndef LWT_H
 #define LWT_H
 
-#include <stdlib.h>
-#include <stdio.h>
+// #include <stdlib.h>
+// #include <stdio.h>
 #include "lwt_list.h"
 
-// #include "sl.h"
-// #include <cos_defkernel_api.h>
+#include "sl.h"
+#include <cos_defkernel_api.h>
 
 /* turn this on will enable error check for user input */
 #ifdef DEBUG
-#define printd(format, ...)  printf("%s Line: %05d: " format, __FILE__, __LINE__, ## __VA_ARGS__)
+#define printd(format, ...)  //printc("%s Line: %05d: " format, __FILE__, __LINE__, ## __VA_ARGS__)
 #else
 #define printd(format, ...)
 #endif

@@ -46,20 +46,20 @@ morecore(uint nu)
   char *p;
   Header *hp;
 
-  if(nu < 4096)
-    nu = 4096;
-  p = malloc(nu * sizeof(Header));
+  // if(nu < 4096)
+  //   nu = 4096;
+  // p = malloc(nu * sizeof(Header));
 
-  //int i, k;
-  // p = cos_page_bump_alloc(ci);
-  // if (((nu * sizeof(Header)) / 4096) > 0)
-  // {
-  //   k = (nu * sizeof(Header)) / 4096;
-  //   for (i = 0; i < k; ++ i)
-  //   {
-  //     cos_page_bump_alloc(ci);
-  //   }
-  // }
+  int i, k;
+  p = cos_page_bump_alloc(ci);
+  if (((nu * sizeof(Header)) / 4096) > 0)
+  {
+    k = (nu * sizeof(Header)) / 4096;
+    for (i = 0; i < k; ++ i)
+    {
+      cos_page_bump_alloc(ci);
+    }
+  }
 
   if(p == (char*)-1)
     return 0;

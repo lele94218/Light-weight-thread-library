@@ -1,7 +1,7 @@
 #include "lwt.h"
 #include "umalloc.h"
 /* --------------- initialization function --------------- */
-void __initiate (void) __attribute__((constructor));
+// void __initiate (void) __attribute__((constructor));
 
 struct _kthd_info kthds[5];
 int current_kthd=0;

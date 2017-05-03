@@ -561,9 +561,9 @@ cos_init(void)
 	cos_defcompinfo_init();
 	sl_init();
 
-	test_yields();
-	test_blocking_directed_yield();
-	sl_sched_loop();
+	// test_yields();
+	// test_blocking_directed_yield();
+	// sl_sched_loop();
     test_file();
 	assert(0);
 
