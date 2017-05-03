@@ -36,35 +36,7 @@ __init_thread(lwt_t created_thread,thdid_t k_id)
 
 /* --------------- Major thread-function implementations --------------- */
 
-/* pause one thread, start executing the next one */
-static inline void
-__lwt_dispatch(struct _lwt_context *curr, struct _lwt_context *next)
-{
-    __asm__ __volatile__(
-        //        "push %%ebx;"
-        //        "push %%edi;"
-        //        "push %%esi;"
-        //        "push %%ebp;"
-        //        "push %%eax;"
-        "pushal;"
-        "movl %%esp,%0;"
-        "movl $retDispatch%=,%1;"
-        "movl %2,%%esp;"
-        "jmp *%3;"
-        "retDispatch%=:;"
-        "popal;"
-        //        "pop %%eax;"
-        //        "pop %%ebp;"
-        //        "pop %%esi;"
-        //        "pop %%edi;"
-        //        "pop %%ebx;"
-        : "=m"(curr->sp), "=m"(curr->ip)
-        : "m"(next->sp), "m"(next->ip)
-        : "cc", "memory"
-        //        : "ebx", "edi", "esi", "ebp", "eax", "memory"
 
-        );
-}
 
 /* find one runnable thread and execute it */
 inline void
@@ -86,9 +58,8 @@ void __initiate(thdid_t kthd_id)
     kthds[kthd_id].current_thread = (lwt_t)umalloc(sizeof(struct _lwt_t));
     __init_thread(kthds[kthd_id].current_thread, kthd_id);
     kthds[kthd_id].current_thread->state = LWT_RUNNING;
-    //list_head_append_d(&(kthds[kthd_id].run_queue), kthds[kthd_id].current_thread);
     kthds[kthd_id].main_thread = kthds[kthd_id].current_thread;
-    list_head_append_d(&(kthds[kthd_id].run_queue), kthds[kthd_id].current_thread);
+    // list_head_append_d(&(kthds[kthd_id].run_queue), kthds[kthd_id].current_thread);
     printc("initialization complete\n");
 }
 
@@ -200,7 +171,7 @@ __lwt_trampoline(lwt_fn_t fn, void *data)
 int lwt_yield(lwt_t yield_to)
 {
     lwt_t current_thread = lwt_current();
-    printc("current thread is: %d!\n",current_thread->lwt_id);
+    // printc("current thread is: %d!\n",current_thread->lwt_id);
     /* yield to itself */
     if (yield_to == current_thread || (yield_to && yield_to->state != LWT_RUNNABLE && yield_to->state != LWT_RUNNING))
     {
@@ -216,14 +187,14 @@ int lwt_yield(lwt_t yield_to)
     /* yield to NULL */
     else
     {    
-        printc("yield NULL \n");
+        // printc("yield NULL \n");
         if (current_thread->state == LWT_RUNNABLE || current_thread->state == LWT_RUNNING)
         {
             list_rem_d(current_thread);
             list_head_add_d(current_run_queue(), current_thread);
         }
     }
-    printc("begin to schedule \n");
+    // printc("begin to schedule \n");
     __lwt_schedule();
 
     return 0;

@@ -214,6 +214,36 @@ struct list_head * current_recycle_queue();
 void lwt_init_cap(struct _lwt_cap *);
 void __initiate(thdid_t);
 
+/* pause one thread, start executing the next one */
+static inline void
+__lwt_dispatch(struct _lwt_context *curr, struct _lwt_context *next)
+{
+    __asm__ __volatile__(
+        //        "push %%ebx;"
+        //        "push %%edi;"
+        //        "push %%esi;"
+        //        "push %%ebp;"
+        //        "push %%eax;"
+        "pushal;"
+        "movl %%esp,%0;"
+        "movl $retDispatch%=,%1;"
+        "movl %2,%%esp;"
+        "jmp *%3;"
+        "retDispatch%=:;"
+        "popal;"
+        //        "pop %%eax;"
+        //        "pop %%ebp;"
+        //        "pop %%esi;"
+        //        "pop %%edi;"
+        //        "pop %%ebx;"
+        : "=m"(curr->sp), "=m"(curr->ip)
+        : "m"(next->sp), "m"(next->ip)
+        : "cc", "memory"
+        //        : "ebx", "edi", "esi", "ebp", "eax", "memory"
+
+        );
+}
+
 /* --------------------------- Function declaration for lwt thread channel operation --------------------------- */
 lwt_chan_t lwt_chan (int sz);
 void lwt_chan_deref (lwt_chan_t c);
