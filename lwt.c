@@ -14,7 +14,6 @@ thdid_t current_kthd=0;
 /* --------------- internal function declarations --------------- */
 void __lwt_schedule(void);
 void *__lwt_trampoline(lwt_fn_t, void *);
-void __initiate(void);
 void __print_a_thread_queue(struct list_head *);
 void init_kthd(struct _kthd_info *kthd);
 
@@ -73,6 +72,7 @@ __lwt_schedule()
 {
     lwt_t old_thread = lwt_current();
     lwt_t new_thread = list_head_first_d(current_run_queue(), struct _lwt_t);
+    if (!new_thread) new_thread = kthds[current_kthd].main_thread;
     printd("thread %d start executing from reschedule\n", new_thread->lwt_id);
     new_thread->state = LWT_RUNNING;
     kthds[current_kthd].current_thread = new_thread;
@@ -80,14 +80,14 @@ __lwt_schedule()
 }
 
 /* initialize the library */
-void __initiate()
+void __initiate(thdid_t kthd_id)
 {
-    init_kthd(&(kthds[current_kthd]));
-    kthds[current_kthd].current_thread = (lwt_t)umalloc(sizeof(struct _lwt_t));
-    __init_thread(kthds[current_kthd].current_thread);
-    kthds[current_kthd].current_thread->state = LWT_RUNNING;
-
-    list_head_append_d(current_run_queue(), lwt_current());
+    init_kthd(&(kthds[kthd_id]));
+    kthds[kthd_id].current_thread = (lwt_t)umalloc(sizeof(struct _lwt_t));
+    __init_thread(kthds[kthd_id].current_thread);
+    kthds[kthd_id].current_thread->state = LWT_RUNNING;
+    list_head_append_d(&(kthds[kthd_id].run_queue), kthds[kthd_id].current_thread);
+    kthds[kthd_id].main_thread = kthds[kthd_id].current_thread;
     printd("initialization complete\n");
 }
 

@@ -9,6 +9,11 @@
 // int lwt_counter = 0;
 // int zombie_counter = 0;
 // int block_counter = 0;
+struct __func_param
+{
+    lwt_fn_t func;
+    void * data;
+}
 
 /* --------------- Thread communication function implementation, channelling --------------- */
 
@@ -323,35 +328,41 @@ lwt_chan_mark_get(lwt_chan_t chan)
 }
 
 /* --------------- kernel thread API --------------- */
-// void lwt_kthd_trampline()
-// {
-//     // 
-//     while(1)
-//     {
-//         lwt_t __thread = list_head_first_d(current_run_queue(), struct _lwt_t);
-//         if (__thread)
-//         {
-//             /* has lwt in run queue */
-//             lwt_yield(__thread);
-//         }
-//         else
-//         {
-//             /* block kthd */
-//         }
-//     }
-// }
+void lwt_kthd_trampline(void * ptr)
+{
+    lwt_create(((struct __func_param *)ptr)->func, (void *)(((struct __func_param *)ptr)->data), 0);
+    ufree(ptr);
+    while(1)
+    {
+        lwt_t thd = list_head_first_d(current_run_queue(), struct _lwt_t);
+        if (thd)
+        {
+            /* has lwt in run queue */
+            lwt_yield(NULL);
+        }
+        else
+        {
+            /* block kthd */
+            sl_thd_block(current_kthd);
+            sl_thd_yield(NULL);
+        }
+    }
+    return;
+}
 
-// int lwt_kthd_create(lwt_fn_t fn, lwt_chan_t c)
-// {
+int lwt_kthd_create(lwt_fn_t fn, lwt_chan_t c)
+{
 
-//     printd("----------\n");
-//     // struct sl_thd * curr_kthd = sl_thd_alloc((cos_thd_fn_t) lwt_yield, NULL);
-//     // lwt_init_cap(curr_kthd->lwt_cap);
-//     // _lwt_t __thread = lwt_create(fn, (void *)c, 0);
-//     // curr_kthd->lwt_cap->current_thread = __thread;
-//     // __thread->kthd = curr_kthd;
-//     return 0;
-// }
+    printd("-------------\n");
+    struct __func_param * __fp = umalloc(sizeof(struct __func_param));
+    __fp->func = fn;
+    __fp->data = (void *)c;
+    struct sl_thd * curr_kthd = sl_thd_alloc((cos_thd_fn_t)lwt_kthd_trampline, (void *) __fp);
+    __initiate(curr_kthd->thdid);
+	union sched_param sph = {.c = {.type = SCHEDP_PRIO, .value = 10}};
+	sl_thd_param_set(curr_kthd, sph.v);
+    return 0;
+}
 
 /* --------------- internal function for user level debugging --------------- */
 

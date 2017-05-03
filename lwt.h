@@ -195,6 +195,7 @@ struct _kthd_info
     int nrcving;
     int nsnding;
     lwt_t current_thread;
+    lwt_t main_thread;
     struct list_head run_queue;
     struct list_head recycle_queue;
 };
@@ -211,6 +212,7 @@ lwt_t lwt_current();
 struct list_head * current_run_queue();
 struct list_head * current_recycle_queue();
 void lwt_init_cap(struct _lwt_cap *);
+void __initiate(thdid_t);
 
 /* --------------------------- Function declaration for lwt thread channel operation --------------------------- */
 lwt_chan_t lwt_chan (int sz);
@@ -231,7 +233,7 @@ void lwt_chan_mark_set(lwt_chan_t, void *);
 void *lwt_chan_mark_get(lwt_chan_t);
 
 /* --------------- kernel thread API --------------- */
-void lwt_kthd_trampline(void);
+void lwt_kthd_trampline(void *);
 int lwt_kthd_create(lwt_fn_t fn, lwt_chan_t c);
 
 
