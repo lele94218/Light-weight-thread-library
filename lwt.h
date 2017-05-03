@@ -237,6 +237,8 @@ lwt_chan_t lwt_cgrp_wait (lwt_cgrp_t cgrp);
 void lwt_chan_mark_set(lwt_chan_t, void *);
 void *lwt_chan_mark_get(lwt_chan_t);
 
+/* --------------- kernel thread API --------------- */
+void lwt_kthd_trampline(void);
 int lwt_kthd_create(lwt_fn_t fn, lwt_chan_t c);
 
 

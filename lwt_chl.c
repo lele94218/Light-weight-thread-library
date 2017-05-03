@@ -326,6 +326,23 @@ lwt_chan_mark_get(lwt_chan_t chan)
 }
 
 /* --------------- kernel thread API --------------- */
+void lwt_kthd_trampline()
+{
+    // 
+    while(1)
+    {
+        lwt_t __thread = list_head_first_d(current_run_queue(), struct _lwt_t);
+        if (__thread)
+        {
+            /* has lwt in run queue */
+            lwt_yield(__thread);
+        }
+        else
+        {
+            /* block kthd */
+        }
+    }
+}
 
 int lwt_kthd_create(lwt_fn_t fn, lwt_chan_t c)
 {
