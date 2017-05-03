@@ -24,8 +24,8 @@
 #define LWT_NULL NULL
 
 /* define prediction */
-#define likely(x)   __builtin_expect((x),1)
-#define unlikely(x) __builtin_expect((x),0)
+// #define likely(x)   __builtin_expect((x),1)
+// #define unlikely(x) __builtin_expect((x),0)
 
 /* attributes of the created thread */
 #define LWT_NOJOIN 1

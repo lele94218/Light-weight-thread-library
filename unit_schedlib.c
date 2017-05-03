@@ -518,7 +518,7 @@ void test_grpwait(int chsz, int grpsz)
 int test_file(void)
 {
     __initiate();
-    printd("--------------------------\n");
+    printc("-----------!!!---------------\n");
     test_perf();
     test_perf_channels(0);
     test_perf_async_steam(ITER / 10 < 100 ? ITER / 10 : 100);
@@ -536,16 +536,16 @@ void
 test_blocking_directed_yield(void)
 {
 	printc("begin test...\n");
-	struct sl_thd          *low, *high;
-	union sched_param       sph = {.c = {.type = SCHEDP_PRIO, .value = 5}};
-	union sched_param       spl = {.c = {.type = SCHEDP_PRIO, .value = 10}};
+	// struct sl_thd          *low, *high;
+	// union sched_param       sph = {.c = {.type = SCHEDP_PRIO, .value = 5}};
+	// union sched_param       spl = {.c = {.type = SCHEDP_PRIO, .value = 10}};
 
-	low  = sl_thd_alloc(test_low, NULL);
-	high = sl_thd_alloc(test_high, low);
-	sl_thd_param_set(low, spl.v);
-	sl_thd_param_set(high, sph.v);
-	lwt_kthd_create(test_lwt, NULL);
-	lwt_kthd_create(test_lwt, NULL);
+	// low  = sl_thd_alloc(test_low, NULL);
+	// high = sl_thd_alloc(test_high, low);
+	// sl_thd_param_set(low, spl.v);
+	// sl_thd_param_set(high, sph.v);
+	// lwt_kthd_create(test_lwt, NULL);
+	// lwt_kthd_create(test_lwt, NULL);
 
 
 }
