@@ -58,7 +58,7 @@ sl_thd_block(thdid_t tid)
 	struct sl_thd *t;
 
 	/* TODO: dependencies not yet supported */
-	// assert(!tid);
+	assert(!tid);
 
 	sl_cs_enter();
 	t = sl_thd_curr();
