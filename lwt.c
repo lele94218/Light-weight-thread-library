@@ -2,7 +2,7 @@
 #include "umalloc.h"
 
 
-struct _kthd_info kthds[5];
+struct _kthd_info kthds[MAX_KTHD_NUM];
 /* --------------- initialization function --------------- */
 // void __initiate (void) __attribute__((constructor));
 
