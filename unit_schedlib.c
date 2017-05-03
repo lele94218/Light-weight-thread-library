@@ -549,7 +549,8 @@ fun2(){
     }
 }
 
-fun(){
+fun(void * c){
+    lwt_snd(c, (void *)1);
     lwt_create(fun2, (void *)0, 0);
 }
 fun4(){
@@ -560,8 +561,10 @@ fun4(){
     }
 }
 
-fun3(){
+fun3(void * c){
+    lwt_rcv(c);
     lwt_create(fun4, (void *)0, 0);
+    
 }
 
 void
@@ -584,9 +587,9 @@ test_blocking_directed_yield(void)
     // }
     // sl_thd_param_set(low1, sph.v);
 	// //sl_thd_param_set(high, sph.v);
-    printc("compilation complete2!!!!!!!!!!!!!!!\n");
-	lwt_kthd_create(fun, NULL);
-    lwt_kthd_create(fun3,NULL);
+    lwt_chan_t c = lwt_chan(0);
+	lwt_kthd_create(fun, (void *)c);
+    lwt_kthd_create(fun3,(void *)c);
 
 
 }
