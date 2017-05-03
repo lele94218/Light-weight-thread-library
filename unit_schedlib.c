@@ -21,7 +21,7 @@
 #define BUG() do { debug_print("BUG @ "); *((int *)0) = 0; } while (0);
 #define SPIN(iters) do { if (iters > 0) { for (; iters > 0 ; iters -- ) ; } else { while (1) ; } } while (0)
 
-#define ITER 1000
+#define ITER 5
 struct cos_compinfo *ci;
 
 static void

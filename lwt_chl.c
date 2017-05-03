@@ -339,7 +339,7 @@ void lwt_kthd_trampline(void * ptr)
         lwt_t thd = list_head_first_d(current_run_queue(), struct _lwt_t);
         if (thd)
         {
-        printc("has lwt in run queue!\n");
+        //printc("has lwt in run queue!\n");
         printc("has lwt in run queue, current kthd: %d!\n", current_kthd);
         print_queue_content(LWT_INFO_NTHD_RUNNABLE);
             /* has lwt in run queue */

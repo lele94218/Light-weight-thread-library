@@ -216,14 +216,14 @@ int lwt_yield(lwt_t yield_to)
     /* yield to NULL */
     else
     {    
-        printc("yield NULL");
+        printc("yield NULL \n");
         if (current_thread->state == LWT_RUNNABLE || current_thread->state == LWT_RUNNING)
         {
             list_rem_d(current_thread);
             list_head_add_d(current_run_queue(), current_thread);
         }
     }
-    printc("begin to schedule");
+    printc("begin to schedule \n");
     __lwt_schedule();
 
     return 0;
