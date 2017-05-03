@@ -370,6 +370,18 @@ int lwt_kthd_create(lwt_fn_t fn, lwt_chan_t c)
     return 0;
 }
 
+int lwt_snd_thd(lwt_chan_t chan, lwt_t sending)
+{
+    assert(lwt_current()!=sending);
+    lwt_snd(chan, (void *)sending);
+}
+
+lwt_t lwt_rcv_thd(lwt_chan_t chan)
+{
+    lwt_t t = (lwt_t)lwt_rcv(chan);
+    return t;
+}
+
 /* --------------- internal function for user level debugging --------------- */
 
 /* get a queue size */

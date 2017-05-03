@@ -265,7 +265,8 @@ void *lwt_chan_mark_get(lwt_chan_t);
 /* --------------- kernel thread API --------------- */
 void lwt_kthd_trampline(void *);
 int lwt_kthd_create(lwt_fn_t fn, lwt_chan_t c);
-
+int lwt_snd_thd(lwt_chan_t chan, lwt_t sending);
+lwt_t lwt_rcv_thd(lwt_chan_t chan);
 
 
 /* --------------------------- debugging function --------------------------- */
