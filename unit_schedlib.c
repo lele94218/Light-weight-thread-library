@@ -541,7 +541,28 @@ int test_file(void)
 
     return 0;
 }
+fun2(){
+    int i =10;
+    while(i > 0){
+        printc("this is func2 \n");
+        i--;
+    }
+}
 
+fun(){
+    lwt_create(fun2, (void *)0, 0);
+}
+fun4(){
+    int i = 10;
+    while(i>0){
+        printc("this is func4 \n");
+        i--;
+    }
+}
+
+fun3(){
+    lwt_create(fun4, (void *)0, 0);
+}
 
 void
 test_blocking_directed_yield(void)
@@ -564,7 +585,8 @@ test_blocking_directed_yield(void)
     // sl_thd_param_set(low1, sph.v);
 	// //sl_thd_param_set(high, sph.v);
     
-	lwt_kthd_create(test_file, NULL);
+	lwt_kthd_create(fun, NULL);
+    lwt_kthd_create(fun3,NULL);
 
 
 }
