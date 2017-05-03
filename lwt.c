@@ -88,7 +88,8 @@ void __initiate(thdid_t kthd_id)
     kthds[kthd_id].current_thread->state = LWT_RUNNING;
     //list_head_append_d(&(kthds[kthd_id].run_queue), kthds[kthd_id].current_thread);
     kthds[kthd_id].main_thread = kthds[kthd_id].current_thread;
-    printd("initialization complete\n");
+    list_head_append_d(&(kthds[kthd_id].run_queue), kthds[kthd_id].current_thread);
+    printc("initialization complete\n");
 }
 
 void init_kthd(struct _kthd_info *kthd)
@@ -214,13 +215,15 @@ int lwt_yield(lwt_t yield_to)
     }
     /* yield to NULL */
     else
-    {
+    {    
+        printc("yield NULL");
         if (current_thread->state == LWT_RUNNABLE || current_thread->state == LWT_RUNNING)
         {
             list_rem_d(current_thread);
             list_head_add_d(current_run_queue(), current_thread);
         }
     }
+    printc("begin to schedule");
     __lwt_schedule();
 
     return 0;
