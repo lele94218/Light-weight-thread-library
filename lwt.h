@@ -19,9 +19,6 @@
 /* define size of stack for created thread */
 #define MAX_STACK_SIZE (100 * 1024 * 8)
 
-#define MAX_KTHD_NUM 32
-
-
 /* define NULL pointer */
 #define LWT_NULL NULL
 
@@ -187,7 +184,6 @@ typedef struct _lwt_t * lwt_t;
 typedef void * (*lwt_fn_t)(void *);
 typedef void * (*lwt_chan_fn_t)(lwt_chan_t);
 
-
 struct _kthd_info
 {
     /* below are counters for lwt and channel for a kthd */
@@ -202,9 +198,6 @@ struct _kthd_info
     struct list_head run_queue;
     struct list_head recycle_queue;
 };
-
-
-
 
 
 /* --------------------------- Funciton declaration for lwt thread operation --------------------------- */
@@ -246,17 +239,8 @@ void print_queue_content(enum lwt_info_t);
 int lwt_info(enum lwt_info_t t);
 extern int printc(char * fmt, ...);
 /* --------------- global variable --------------- */
-
-extern int block_counter;
-extern int lwt_counter;
-extern int zombie_counter;
-extern int nrcving;
-extern int nsnding;
-
-extern lwt_t current_thread;
-extern struct list_head run_queue;
-extern struct list_head recycle_queue;
+extern struct _kthd_info kthds[];
+extern thdid_t current_kthd;
 extern struct cos_compinfo *ci;
-
 
 #endif

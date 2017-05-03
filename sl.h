@@ -36,6 +36,13 @@
 #include <sl_mod_policy.h>
 #include <sl_plugins.h>
 
+/* Below definition is for lwt library */
+
+
+//extern struct _kthd_info kthds[];
+extern thdid_t current_kthd;
+
+
 /* Critical section (cs) API to protect scheduler data-structures */
 struct sl_cs {
 	union sl_cs_intern {
@@ -61,7 +68,7 @@ struct sl_global {
 };
 
 extern struct sl_global sl_global_data;
-extern thdid_t current_kthd;
+
 
 
 static inline struct sl_global *
