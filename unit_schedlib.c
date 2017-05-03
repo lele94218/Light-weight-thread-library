@@ -517,7 +517,7 @@ void test_grpwait(int chsz, int grpsz)
 
 int test_file(void)
 {
-    __initiate();
+    // __initiate();
     printc("-----------!!!---------------\n");
     test_perf();
     test_perf_channels(0);
@@ -545,7 +545,7 @@ test_blocking_directed_yield(void)
 	// sl_thd_param_set(low, spl.v);
 	// sl_thd_param_set(high, sph.v);
 	// lwt_kthd_create(test_lwt, NULL);
-	lwt_kthd_create(test_lwt, NULL);
+	lwt_kthd_create(test_lwt, 9);
 
 
 }

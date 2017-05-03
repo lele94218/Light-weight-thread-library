@@ -13,7 +13,7 @@ struct __func_param
 {
     lwt_fn_t func;
     void * data;
-}
+};
 
 /* --------------- Thread communication function implementation, channelling --------------- */
 
