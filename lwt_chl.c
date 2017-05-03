@@ -104,7 +104,7 @@ void __resume_thread(lwt_t thread)
     list_rem_d(thread);
     thread->state = LWT_RUNNABLE;
     kthds[current_kthd].block_counter--;
-    list_head_append_d(current_run_queue(), thread);
+    list_head_append_d(owner_run_queue(), thread);
 }
 
 /* send data through a channel, block sender until receiver received the data */
@@ -380,6 +380,20 @@ int lwt_snd_thd(lwt_chan_t chan, lwt_t sending)
 lwt_t lwt_rcv_thd(lwt_chan_t chan)
 {
     lwt_t t = (lwt_t)lwt_rcv(chan);
+    t->owner_kthd=current_kthd;
+    if(t->state == LWT_RUNNING)
+    {
+        //must wait till it paused to change the true owner ship
+    }
+    else if(t->state == LWT_RUNNABLE)
+    {
+        list_rem_d(t);
+        list_head_append_d(owner_run_queue(), t);
+    }
+    else
+    {
+        //must wait till is resumed and get back to owner run queue
+    }
     return t;
 }
 

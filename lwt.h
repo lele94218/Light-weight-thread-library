@@ -167,14 +167,14 @@ struct _lwt_t
     lwt_chan_t chl;
     lwt_chan_t now_rcving;
 
-    /* k thd information */
-    struct _lwt_cap * kthd;
+    // /* k thd information */
+    // struct _lwt_cap * kthd;
 
     /* thread join state */
     int nojoin;
 
     /* kernel thread */
-    int kthd_index;
+    int owner_kthd;
 };
 
 typedef struct _lwt_t * lwt_t;
@@ -211,6 +211,7 @@ int lwt_id(lwt_t input_thread);
 lwt_t lwt_current();
 struct list_head * current_run_queue();
 struct list_head * current_recycle_queue();
+struct list_head * owner_run_queue();
 void lwt_init_cap(struct _lwt_cap *);
 void __initiate(thdid_t);
 

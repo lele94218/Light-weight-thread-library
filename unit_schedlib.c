@@ -584,7 +584,7 @@ test_blocking_directed_yield(void)
     // }
     // sl_thd_param_set(low1, sph.v);
 	// //sl_thd_param_set(high, sph.v);
-    
+    printc("compilation complete2!!!!!!!!!!!!!!!\n");
 	lwt_kthd_create(fun, NULL);
     lwt_kthd_create(fun3,NULL);
 

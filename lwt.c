@@ -31,7 +31,7 @@ __init_thread(lwt_t created_thread,thdid_t k_id)
     /* NOTE: here snd_cnt is manually changed */
     created_thread->chl->snd_cnt += 1;
     created_thread->nojoin = 0;
-    created_thread->kthd_index = k_id;
+    created_thread->owner_kthd = k_id;
 }
 
 /* --------------- Major thread-function implementations --------------- */
@@ -186,7 +186,7 @@ int lwt_yield(lwt_t yield_to)
     if (likely((long int)yield_to))
     {
         list_rem_d(yield_to);
-        list_head_append_d(current_run_queue(), yield_to);
+        list_head_append_d(owner_run_queue(), yield_to);
     }
     /* yield to NULL */
     else
@@ -195,7 +195,7 @@ int lwt_yield(lwt_t yield_to)
         if (current_thread->state == LWT_RUNNABLE || current_thread->state == LWT_RUNNING)
         {
             list_rem_d(current_thread);
-            list_head_add_d(current_run_queue(), current_thread);
+            list_head_add_d(owner_run_queue(), current_thread);
         }
     }
     // printc("begin to schedule \n");
@@ -238,6 +238,12 @@ struct list_head *
 current_run_queue()
 {
     return &(kthds[current_kthd].run_queue);
+}
+
+struct list_head *
+owner_run_queue()
+{
+    return &(kthds[kthds[current_kthd].current_thread->owner_kthd].run_queue);
 }
 
 struct list_head *
