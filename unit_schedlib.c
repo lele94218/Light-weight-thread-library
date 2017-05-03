@@ -102,7 +102,15 @@ test_low(void *data)
 		printc("l");
 	}
 }
-
+void
+test_low1(void *data)
+{
+	while (1) {
+		int workiters = WORKITERS * 10;
+		SPIN(workiters);
+		printc("L");
+	}
+}
 void
 test_lwt(int a)
 {
@@ -183,6 +191,9 @@ void test_perf(void)
     rdtscll(end);
 
     printc("[PERF] %5lld <- fork/join\n", (end - start) / ITER);
+    printc("%d\n",lwt_info(LWT_INFO_NTHD_RUNNABLE));
+    printc("%d\n",lwt_info(LWT_INFO_NTHD_ZOMBIES));
+    printc("%d\n",lwt_info(LWT_INFO_NTHD_BLOCKED));
     IS_RESET();
 
     chld1 = lwt_create(fn_bounce, (void *)1, 0);
@@ -536,16 +547,24 @@ void
 test_blocking_directed_yield(void)
 {
 	printc("begin test...\n");
-	struct sl_thd          *low, *high;
+	struct sl_thd          *low, *low1, *high;
 	union sched_param       sph = {.c = {.type = SCHEDP_PRIO, .value = 5}};
 	union sched_param       spl = {.c = {.type = SCHEDP_PRIO, .value = 10}};
 
 	// low  = sl_thd_alloc(test_low, NULL);
-	// high = sl_thd_alloc(test_high, low);
+    // low1  = sl_thd_alloc(test_low1, NULL);
+	// //high = sl_thd_alloc(test_high, low);
 	// sl_thd_param_set(low, spl.v);
-	// sl_thd_param_set(high, sph.v);
-	// lwt_kthd_create(test_lwt, NULL);
-	lwt_kthd_create(test_lwt, 9);
+    // sl_thd_param_set(low1, spl.v);
+    // sl_sched_loop();
+    // int i=1000000;
+    // while(i>0){
+    //     i--;
+    // }
+    // sl_thd_param_set(low1, sph.v);
+	// //sl_thd_param_set(high, sph.v);
+    
+	lwt_kthd_create(test_file, NULL);
 
 
 }
@@ -564,7 +583,7 @@ cos_init(void)
 	// test_yields();
 	test_blocking_directed_yield();
 	sl_sched_loop();
-    // test_file();
+
     // while(1);
 	assert(0);
 

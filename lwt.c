@@ -21,9 +21,9 @@ void init_kthd(struct _kthd_info *kthd);
 
 /* initiate a struct of lwt */
 static inline void
-__init_thread(lwt_t created_thread)
+__init_thread(lwt_t created_thread,thdid_t k_id)
 {
-    created_thread->lwt_id = kthds[current_kthd].lwt_counter++;
+    created_thread->lwt_id = kthds[k_id].lwt_counter++;
     created_thread->state = LWT_RUNNING;
     created_thread->parent = NULL;
     created_thread->message_data = NULL;
@@ -31,7 +31,7 @@ __init_thread(lwt_t created_thread)
     /* NOTE: here snd_cnt is manually changed */
     created_thread->chl->snd_cnt += 1;
     created_thread->nojoin = 0;
-    created_thread->kthd_index = current_kthd;
+    created_thread->kthd_index = k_id;
 }
 
 /* --------------- Major thread-function implementations --------------- */
@@ -84,7 +84,7 @@ void __initiate(thdid_t kthd_id)
 {
     init_kthd(&(kthds[kthd_id]));
     kthds[kthd_id].current_thread = (lwt_t)umalloc(sizeof(struct _lwt_t));
-    __init_thread(kthds[kthd_id].current_thread);
+    __init_thread(kthds[kthd_id].current_thread, kthd_id);
     kthds[kthd_id].current_thread->state = LWT_RUNNING;
     list_head_append_d(&(kthds[kthd_id].run_queue), kthds[kthd_id].current_thread);
     kthds[kthd_id].main_thread = kthds[kthd_id].current_thread;
@@ -125,7 +125,7 @@ lwt_t lwt_create(lwt_fn_t fn, void *data, lwt_flags_t flags)
     }
 
     /* Init other data */
-    __init_thread(next_thread);
+    __init_thread(next_thread, current_kthd);
     next_thread->parent = lwt_current();
 
     /* Init funciton info */
