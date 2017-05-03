@@ -541,36 +541,12 @@ int test_file(void)
 
     return 0;
 }
-fun2(){
-    int i =10;
-    while(i > 0){
-        printc("this is func2 \n");
-        i--;
-    }
-}
 
-fun(void * c){
-    lwt_snd(c, (void *)1);
-    lwt_create(fun2, (void *)0, 0);
-}
-fun4(){
-    int i = 10;
-    while(i>0){
-        printc("this is func4 \n");
-        i--;
-    }
-}
-
-fun3(void * c){
-    lwt_rcv(c);
-    lwt_create(fun4, (void *)0, 0);
-    
-}
 
 void
 test_blocking_directed_yield(void)
 {
-	printc("begin test...\n");
+	printc("begin test..?.\n");
 	struct sl_thd          *low, *low1, *high;
 	union sched_param       sph = {.c = {.type = SCHEDP_PRIO, .value = 5}};
 	union sched_param       spl = {.c = {.type = SCHEDP_PRIO, .value = 10}};
@@ -587,9 +563,8 @@ test_blocking_directed_yield(void)
     // }
     // sl_thd_param_set(low1, sph.v);
 	// //sl_thd_param_set(high, sph.v);
-    lwt_chan_t c = lwt_chan(0);
-	lwt_kthd_create(fun, (void *)c);
-    lwt_kthd_create(fun3,(void *)c);
+    
+	lwt_kthd_create(test_file, NULL);
 
 
 }

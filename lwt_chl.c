@@ -104,6 +104,7 @@ void __resume_thread(lwt_t thread)
     list_rem_d(thread);
     thread->state = LWT_RUNNABLE;
     kthds[current_kthd].block_counter--;
+    // list_head_append_d(current_run_queue(), thread);
     list_head_append_d(owner_run_queue(), thread);
 }
 
@@ -113,7 +114,7 @@ int lwt_snd(lwt_chan_t chan, void *data)
     lwt_t current_thread = lwt_current();
     if (unlikely(chan->receiver == NULL))
     {
-        printc("thread %d has send data: %d to channel %d, but no receiver.\n", current_thread->lwt_id, (int)data, chan->chan_id);
+        printd("thread %d has send data: %d to channel %d, but no receiver.\n", current_thread->lwt_id, (int)data, chan->chan_id);
         return -1;
     }
 
@@ -121,9 +122,9 @@ int lwt_snd(lwt_chan_t chan, void *data)
     {
         /* someone is waiting */
         chan->receiver->message_data = data;
-        printc("thread %d has send data %d to channel %d and it has recevier thread %d.\n", current_thread->lwt_id, (int)data, chan->chan_id, chan->receiver->lwt_id);
+        printd("thread %d has send data %d to channel %d and it has recevier thread %d.\n", current_thread->lwt_id, (int)data, chan->chan_id, chan->receiver->lwt_id);
         __resume_thread(chan->receiver);
-        printc("thread %d done sending data: %d and keep running.\n", current_thread->lwt_id, (int)data);
+        printd("thread %d done sending data: %d and keep running.\n", current_thread->lwt_id, (int)data);
 
         return 0;
     }
@@ -137,13 +138,13 @@ int lwt_snd(lwt_chan_t chan, void *data)
     {
         /* buffer is not full */
         ((uint *)(chan->buffer.data_buffer))[chan->buffer.tail++ % chan->size] = (uint)data;
-        printc("thread %d put data: %d on chan %d's buffer at location %d\n", current_thread->lwt_id, ((uint *)(chan->buffer.data_buffer))[chan->buffer.tail - 1], chan->chan_id, chan->buffer.tail);
+        printd("thread %d put data: %d on chan %d's buffer at location %d\n", current_thread->lwt_id, ((uint *)(chan->buffer.data_buffer))[chan->buffer.tail - 1], chan->chan_id, chan->buffer.tail);
         return 0;
     }
 
     /* buffer doesn't have space */
     current_thread->message_data = data;
-    printc("thread: %d block for sending on channel: %d buffer doesn't have space. \n", current_thread->lwt_id, chan->chan_id);
+    printd("thread: %d block for sending on channel: %d buffer doesn't have space. \n", current_thread->lwt_id, chan->chan_id);
     __block_thread(current_thread, BLOCKED_SENDING, chan);
 
     return 0;
@@ -159,7 +160,7 @@ lwt_rcv(lwt_chan_t chan)
     if (chan->buffer.tail - chan->buffer.head != 0)
     {
         result = (void *)(((uint *)(chan->buffer.data_buffer))[(chan->buffer.head++) % chan->size]);
-        printc("thread %d has received data %d from channel %d.\n", current_thread->lwt_id, (int)result, chan->chan_id);
+        printd("thread %d has received data %d from channel %d.\n", current_thread->lwt_id, (int)result, chan->chan_id);
 
         /* sender queue not empty, free one, move its data to buffer */
         if (!list_head_empty(&(chan->sender_queue)))
@@ -168,12 +169,12 @@ lwt_rcv(lwt_chan_t chan)
             __resume_thread(sender);
 
             ((uint *)(chan->buffer.data_buffer))[(chan->buffer.tail++) % chan->size] = (uint)(sender->message_data);
-            printc("sender %d has been freed and wrote data %d to channel %d.\n", sender->lwt_id, (int)sender->message_data, chan->chan_id);
+            printd("sender %d has been freed and wrote data %d to channel %d.\n", sender->lwt_id, (int)sender->message_data, chan->chan_id);
         }
 
         /* update channel status */
         chan->ready = chan->buffer.head == chan->buffer.tail ? 0 : 1;
-        printc("now channel %d status is %d.\n", chan->chan_id, chan->ready);
+        printd("now channel %d status is %d.\n", chan->chan_id, chan->ready);
         return result;
     }
 
@@ -182,14 +183,14 @@ lwt_rcv(lwt_chan_t chan)
     {
         lwt_t sender = list_head_first_d(&(chan->sender_queue), struct _lwt_t);
         result = sender->message_data;
-        printc("thread %d is receiving data %d from channel %d.\n", current_thread->lwt_id, (int)result, chan->chan_id);
+        printd("thread %d is receiving data %d from channel %d.\n", current_thread->lwt_id, (int)result, chan->chan_id);
         __resume_thread(sender);
         chan->ready = list_head_empty(&(chan->sender_queue)) ? 0 : 1;
         return result;
     }
 
     /* block it self */
-    printc("thread %d is receiving at channel: %d but waiting for a sender.\n", current_thread->lwt_id, chan->chan_id);
+    printd("thread %d is receiving at channel: %d but waiting for a sender.\n", current_thread->lwt_id, chan->chan_id);
     current_thread->now_rcving = chan;
     __block_thread(current_thread, BLOCKED_RECEIVING, chan);
     return current_thread->message_data;
@@ -337,22 +338,23 @@ void lwt_kthd_trampline(void * ptr)
     while(1)
     {
         lwt_t thd = list_head_first_d(current_run_queue(), struct _lwt_t);
-        if (thd)
+        if (!list_head_empty(current_run_queue()))
         {
-        //printc("has lwt in run queue!\n");
-        printc("has lwt in run queue, current kthd: %d!\n", current_kthd);
-        print_queue_content(LWT_INFO_NTHD_RUNNABLE);
+            printc("has lwt in run queue, current kthd: %d!\n", current_kthd);
+            print_queue_content(LWT_INFO_NTHD_RUNNABLE);
             /* has lwt in run queue */
-            lwt_yield(NULL);
+
+            thd->state = LWT_RUNNING;
+            kthds[current_kthd].current_thread = thd;
+            __lwt_dispatch(&(kthds[current_kthd].main_thread)->context, &thd->context);
         }
         else
-        {printc("block kthd!\n");
+        {
+            printc("block kthd: %d!\n", current_kthd);
             /* block kthd */
-            sl_thd_block(current_kthd);
+            sl_thd_block(0);
             sl_thd_yield(NULL);
         }
-
-        
     }
     return;
 }
@@ -369,6 +371,7 @@ int lwt_kthd_create(lwt_fn_t fn, lwt_chan_t c)
 	sl_thd_param_set(curr_kthd, sph.v);
     return 0;
 }
+
 int lwt_snd_thd(lwt_chan_t chan, lwt_t sending)
 {
     assert(lwt_current()!=sending);
@@ -421,7 +424,6 @@ void __print_a_thread_queue(struct list_head *list_to_print)
     }
 }
 
-
 /* print the content of a channel queue */
 void __print_a_chan_queue(struct list_head *list_to_print)
 {
@@ -441,9 +443,7 @@ int lwt_info(enum lwt_info_t t)
     switch (t)
     {
     case LWT_INFO_NTHD_RUNNABLE:
-        return __get_queue_size(current_run_queue()) - 1; 
-     
-        //return kthds[current_kthd].runnable_counter;
+        return __get_queue_size(current_run_queue());
     case LWT_INFO_NTHD_BLOCKED:
         return kthds[current_kthd].block_counter;
     case LWT_INFO_NTHD_ZOMBIES:
