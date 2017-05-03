@@ -39,7 +39,7 @@
 /* Below definition is for lwt library */
 
 
-//extern struct _kthd_info kthds[];
+//changing thd_id in other module;
 extern thdid_t current_kthd;
 
 
