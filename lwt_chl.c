@@ -1,9 +1,6 @@
 #include "lwt.h"
 #include "umalloc.h"
 
-
-extern struct _kthd_info kthds[];
-
 // int nrcving = 0;
 // int nsnding = 0;
 // int chan_counter = 0;

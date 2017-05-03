@@ -11,11 +11,11 @@
 #include <cos_debug.h>
 #include <cos_kernel_api.h>
 
+
 struct sl_global sl_global_data;
 /*
  * global current kernel thread.
  */
-thdid_t current_kthd = 0;
 
 /*
  * These functions are removed from the inlined fast-paths of the
