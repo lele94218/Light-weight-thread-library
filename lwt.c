@@ -86,7 +86,7 @@ void __initiate(thdid_t kthd_id)
     kthds[kthd_id].current_thread = (lwt_t)umalloc(sizeof(struct _lwt_t));
     __init_thread(kthds[kthd_id].current_thread, kthd_id);
     kthds[kthd_id].current_thread->state = LWT_RUNNING;
-    list_head_append_d(&(kthds[kthd_id].run_queue), kthds[kthd_id].current_thread);
+    //list_head_append_d(&(kthds[kthd_id].run_queue), kthds[kthd_id].current_thread);
     kthds[kthd_id].main_thread = kthds[kthd_id].current_thread;
     printd("initialization complete\n");
 }
@@ -123,7 +123,6 @@ lwt_t lwt_create(lwt_fn_t fn, void *data, lwt_flags_t flags)
         _sp += MAX_STACK_SIZE;
         next_thread->init_sp = _sp;
     }
-
     /* Init other data */
     __init_thread(next_thread, current_kthd);
     next_thread->parent = lwt_current();
@@ -142,11 +141,9 @@ lwt_t lwt_create(lwt_fn_t fn, void *data, lwt_flags_t flags)
     {
         next_thread->nojoin = 1;
     }
-
     printd("thread: %d has created thread: %d\n", lwt_current()->lwt_id, next_thread->lwt_id);
 
     list_head_add_d(current_run_queue(), next_thread);
-
     return next_thread;
 }
 
@@ -202,6 +199,7 @@ __lwt_trampoline(lwt_fn_t fn, void *data)
 int lwt_yield(lwt_t yield_to)
 {
     lwt_t current_thread = lwt_current();
+    printc("current thread is: %d!\n",current_thread->lwt_id);
     /* yield to itself */
     if (yield_to == current_thread || (yield_to && yield_to->state != LWT_RUNNABLE && yield_to->state != LWT_RUNNING))
     {

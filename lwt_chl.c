@@ -332,16 +332,21 @@ void lwt_kthd_trampline(void * ptr)
 {
     lwt_create(((struct __func_param *)ptr)->func, (void *)(((struct __func_param *)ptr)->data), 0);
     ufree(ptr);
+
+    printc("about to enter loop!\n");
     while(1)
     {
         lwt_t thd = list_head_first_d(current_run_queue(), struct _lwt_t);
         if (thd)
         {
+        printc("has lwt in run queue!\n");
+        printc("has lwt in run queue, current kthd: %d!\n", current_kthd);
+        print_queue_content(LWT_INFO_NTHD_RUNNABLE);
             /* has lwt in run queue */
             lwt_yield(NULL);
         }
         else
-        {
+        {printc("block kthd!\n");
             /* block kthd */
             sl_thd_block(current_kthd);
             sl_thd_yield(NULL);
@@ -352,7 +357,6 @@ void lwt_kthd_trampline(void * ptr)
 
 int lwt_kthd_create(lwt_fn_t fn, lwt_chan_t c)
 {
-
     printd("-------------\n");
     struct __func_param * __fp = umalloc(sizeof(struct __func_param));
     __fp->func = fn;
@@ -385,7 +389,7 @@ void __print_a_thread_queue(struct list_head *list_to_print)
     struct list *curr = (list_to_print->l).n;
     while (curr != &(list_to_print->l))
     {
-        printd("thread %d.\n", (container(curr, struct _lwt_t, list_node))->lwt_id);
+        printc("thread %d.\n", (container(curr, struct _lwt_t, list_node))->lwt_id);
         curr = curr->n;
     }
 }
@@ -432,15 +436,15 @@ void print_queue_content(enum lwt_info_t input)
     switch (input)
     {
     case LWT_INFO_NTHD_RUNNABLE:
-        printd("runnable queue showed as below: \n");
+        printc("runnable queue showed as below: \n");
         __print_a_thread_queue(current_run_queue());
         break;
     case LWT_INFO_NTHD_RECYCLE:
-        printd("recycle queue showed as below: \n");
+        printc("recycle queue showed as below: \n");
         __print_a_thread_queue(current_recycle_queue());
         break;
     default:
-        printd("cannot identify printing instructions\n");
+        printc("cannot identify printing instructions\n");
         break;
     }
 }
