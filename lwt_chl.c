@@ -323,35 +323,35 @@ lwt_chan_mark_get(lwt_chan_t chan)
 }
 
 /* --------------- kernel thread API --------------- */
-void lwt_kthd_trampline()
-{
-    // 
-    while(1)
-    {
-        lwt_t __thread = list_head_first_d(current_run_queue(), struct _lwt_t);
-        if (__thread)
-        {
-            /* has lwt in run queue */
-            lwt_yield(__thread);
-        }
-        else
-        {
-            /* block kthd */
-        }
-    }
-}
+// void lwt_kthd_trampline()
+// {
+//     // 
+//     while(1)
+//     {
+//         lwt_t __thread = list_head_first_d(current_run_queue(), struct _lwt_t);
+//         if (__thread)
+//         {
+//             /* has lwt in run queue */
+//             lwt_yield(__thread);
+//         }
+//         else
+//         {
+//             /* block kthd */
+//         }
+//     }
+// }
 
-int lwt_kthd_create(lwt_fn_t fn, lwt_chan_t c)
-{
+// int lwt_kthd_create(lwt_fn_t fn, lwt_chan_t c)
+// {
 
-    printd("----------\n");
-    // struct sl_thd * curr_kthd = sl_thd_alloc((cos_thd_fn_t) lwt_yield, NULL);
-    // lwt_init_cap(curr_kthd->lwt_cap);
-    // _lwt_t __thread = lwt_create(fn, (void *)c, 0);
-    // curr_kthd->lwt_cap->current_thread = __thread;
-    // __thread->kthd = curr_kthd;
-    return 0;
-}
+//     printd("----------\n");
+//     // struct sl_thd * curr_kthd = sl_thd_alloc((cos_thd_fn_t) lwt_yield, NULL);
+//     // lwt_init_cap(curr_kthd->lwt_cap);
+//     // _lwt_t __thread = lwt_create(fn, (void *)c, 0);
+//     // curr_kthd->lwt_cap->current_thread = __thread;
+//     // __thread->kthd = curr_kthd;
+//     return 0;
+// }
 
 /* --------------- internal function for user level debugging --------------- */
 
