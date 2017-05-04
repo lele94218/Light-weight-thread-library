@@ -533,7 +533,7 @@ int test_file(void)
     test_multisend(ITER / 10 < 100 ? ITER / 10 : 100);
     test_grpwait(0, 15);
     test_grpwait(15, 15);
-    printc("done debugging333333333333333333\n");
+    printc("done!\n");
     return 0;
 }
 

@@ -120,6 +120,7 @@ int lwt_snd(lwt_chan_t chan, void *data)
 {
     if (chan->receiver->owner_kthd != lwt_current()->owner_kthd)
     {
+        printc("Global sending!\n");
         set_chan_type(chan, GLOBAL_CHAN);
         return lwt_sync_snd(chan, data);
     }
@@ -164,7 +165,7 @@ int lwt_snd(lwt_chan_t chan, void *data)
 
 int lwt_sync_snd(lwt_chan_t chan, void *data)
 {
-    int remote_thdid = chan->receiver->owner_kthd->thdid;
+    int remote_thdid = chan->receiver->owner_kthd;
     lwt_t current_thread = lwt_current();
 
     if (chan->buffer.tail - chan->buffer.head != chan->size)
@@ -180,7 +181,7 @@ int lwt_sync_snd(lwt_chan_t chan, void *data)
         {
             sl_cs_enter();
             /* someone is waiting */
-            list_head_add_d(chan->receiver, &kthds[remote_thdid].wakeup_queue);
+            list_head_add_d(&(kthds[remote_thdid].wakeup_queue), chan->receiver);
             /* add remote kernel thread polling flag */
             kthds[remote_thdid].pooling_flag = 1;
             sl_cs_exit();
@@ -195,7 +196,7 @@ int lwt_sync_snd(lwt_chan_t chan, void *data)
     list_head_add_d(&(chan->sender_queue), current_thread);
     kthds[current_kthd].nsnding++;
     current_thread->state = LWT_BLOCKED;
-    current_thread->block_for = block_for;
+    current_thread->block_for = BLOCKED_SENDING;
     kthds[current_kthd].block_counter++;
 
     lwt_yield(NULL);
@@ -209,6 +210,7 @@ lwt_rcv(lwt_chan_t chan)
 {
     if (chan->type == GLOBAL_CHAN)
     {
+        printc("Global rcving!\n");
         return lwt_sync_rcv(chan);
     }
     void *result;
@@ -258,7 +260,7 @@ lwt_sync_rcv(lwt_chan_t chan)
 {
     void *result;
     lwt_t current_thread = lwt_current();
-    int remote_thdid = chan->receiver->owner_kthd->thdid;
+    int remote_thdid = chan->receiver->owner_kthd;
 
     while (1)
     {
@@ -274,7 +276,7 @@ lwt_sync_rcv(lwt_chan_t chan)
                 lwt_t sender = list_head_first_d(&(chan->sender_queue), struct _lwt_t);
                 sl_cs_enter();
                 /* move sender to its remote kernel thread wake up queue */
-                list_head_add_d(sender, &kthds[remote_thdid].wakeup_queue);
+                list_head_add_d(&(kthds[remote_thdid].wakeup_queue), sender);
                 kthds[remote_thdid].pooling_flag = 1;
                 ((uint *)(chan->buffer.data_buffer))[(chan->buffer.tail++) % chan->size] = (uint)(sender->message_data);
                 sl_cs_exit();
@@ -288,7 +290,7 @@ lwt_sync_rcv(lwt_chan_t chan)
         list_rem_d(current_thread);
         kthds[current_kthd].nrcving++;
         current_thread->state = LWT_BLOCKED;
-        current_thread->block_for = block_for;
+        current_thread->block_for = BLOCKED_RECEIVING;
         kthds[current_kthd].block_counter++;
         lwt_yield(NULL);
     }
