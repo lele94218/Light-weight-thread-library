@@ -63,8 +63,6 @@ void __initiate(thdid_t kthd_id)
     __init_thread(kthds[kthd_id].current_thread, kthd_id);
     kthds[kthd_id].current_thread->state = LWT_RUNNING;
     kthds[kthd_id].main_thread = kthds[kthd_id].current_thread;
-    // list_head_append_d(&(kthds[kthd_id].run_queue), kthds[kthd_id].current_thread);
-    printc("initialization complete\n");
 }
 
 void init_kthd(struct _kthd_info *kthd)

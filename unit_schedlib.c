@@ -86,7 +86,6 @@ void
 test_high(void *data)
 {
 	struct sl_thd *t = data;
-
 	while (1) {
 		sl_thd_yield(t->thdid);
 		printc("h");
@@ -102,15 +101,7 @@ test_low(void *data)
 		printc("l");
 	}
 }
-void
-test_low1(void *data)
-{
-	while (1) {
-		int workiters = WORKITERS * 10;
-		SPIN(workiters);
-		printc("L");
-	}
-}
+
 void
 test_lwt(int a)
 {
@@ -436,7 +427,6 @@ void test_perf_async_steam(int chsz)
     assert(LWT_RUNNING == lwt_current()->state);
 
     from = lwt_chan(chsz);
-    printc("chsz size: %d\n", chsz);
     assert(from);
     t = lwt_create_chan(fn_async_steam, from);
     assert(lwt_info(LWT_INFO_NTHD_RUNNABLE) == 2);
@@ -524,7 +514,7 @@ void test_grpwait(int chsz, int grpsz)
 int test_file(void)
 {
     // __initiate();
-    printc("-----------!!!---------------\n");
+    printc("hw3 test starts!\n");
     test_perf();
     test_perf_channels(0);
     test_perf_async_steam(ITER / 10 < 100 ? ITER / 10 : 100);
@@ -533,35 +523,31 @@ int test_file(void)
     test_multisend(ITER / 10 < 100 ? ITER / 10 : 100);
     test_grpwait(0, 15);
     test_grpwait(15, 15);
-    printc("done!!\n");
+    printc("HW3 test file complete\n");
     return 0;
 }
 
 
 void
-test_blocking_directed_yield(void)
+test_hw3(void)
 {
-	printc("begin test..?.\n");
-	struct sl_thd          *low, *low1, *high;
+	lwt_kthd_create(test_file, NULL);
+	sl_sched_loop();
+}
+
+void
+test_kthd(void)
+{
+	printc("begin test for kthd related\n");
+	struct sl_thd          *low, *high;
 	union sched_param       sph = {.c = {.type = SCHEDP_PRIO, .value = 5}};
 	union sched_param       spl = {.c = {.type = SCHEDP_PRIO, .value = 10}};
-
-	// low  = sl_thd_alloc(test_low, NULL);
-    // low1  = sl_thd_alloc(test_low1, NULL);
-	// //high = sl_thd_alloc(test_high, low);
-	// sl_thd_param_set(low, spl.v);
-    // sl_thd_param_set(low1, spl.v);
-    // sl_sched_loop();
-    // int i=1000000;
-    // while(i>0){
-    //     i--;
-    // }
-    // sl_thd_param_set(low1, sph.v);
-	// //sl_thd_param_set(high, sph.v);
+	low  = sl_thd_alloc(test_low, NULL);
+	high = sl_thd_alloc(test_high, low);
+	sl_thd_param_set(low, spl.v);
+    sl_thd_param_set(high, sph.v);
+    sl_sched_loop();
     
-	lwt_kthd_create(test_file, NULL);
-
-
 }
 
 void
@@ -575,9 +561,8 @@ cos_init(void)
 	cos_defcompinfo_init();
 	sl_init();
 
-	// test_yields();
-	test_blocking_directed_yield();
-	sl_sched_loop();
+	// test_hw3();
+    test_kthd();
 
     // while(1);
 	assert(0);

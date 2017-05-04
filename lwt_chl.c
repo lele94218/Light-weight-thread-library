@@ -446,16 +446,11 @@ void lwt_kthd_trampline(void *ptr)
 {
     lwt_create(((struct __func_param *)ptr)->func, (void *)(((struct __func_param *)ptr)->data), 0);
     ufree(ptr);
-
-    printc("about to enter loop!\n");
     while (1)
     {
         lwt_t thd = list_head_first_d(current_run_queue(), struct _lwt_t);
         if (!list_head_empty(current_run_queue()))
         {
-            printc("has lwt in run queue, current kthd: %d!\n", current_kthd);
-            print_queue_content(LWT_INFO_NTHD_RUNNABLE);
-
             /* has lwt in run queue */
 
             thd->state = LWT_RUNNING;
