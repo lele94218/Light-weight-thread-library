@@ -73,8 +73,10 @@ void init_kthd(struct _kthd_info *kthd)
     kthd->zombie_counter = 0;
     kthd->nrcving = 0;
     kthd->nsnding = 0;
+    kthd->pooling_flag = 0;
     list_head_init(&kthd->run_queue);
     list_head_init(&kthd->recycle_queue);
+    list_head_init(&kthd->wakeup_queue);
 }
 
 /* create a thread, return its lwt_t pointer */

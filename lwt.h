@@ -140,6 +140,9 @@ struct _lwt_channel
     
     /* mark of the channel*/
     void * mark;
+
+    /* lock */
+    int lock;
 };
 typedef struct _lwt_channel * lwt_chan_t;
 
@@ -208,12 +211,12 @@ struct _kthd_info
     int zombie_counter;
     int nrcving;
     int nsnding;
+    int pooling_flag;
     lwt_t current_thread;
     lwt_t main_thread;
     struct list_head run_queue;
     struct list_head recycle_queue;
     struct list_head wakeup_queue;
-    int pooling_flag;
 };
 
 
