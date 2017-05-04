@@ -3,7 +3,8 @@
 
 struct _kthd_info kthds[MAX_KTHD_NUM];
 thdid_t current_kthd = 0;
-
+int lwt_counter=0;
+int chan_counter=0;
 /* --------------- initialization function --------------- */
 // void __initiate (void) __attribute__((constructor));
 
@@ -23,7 +24,8 @@ void init_kthd(struct _kthd_info *kthd);
 static inline void
 __init_thread(lwt_t created_thread,thdid_t k_id)
 {
-    created_thread->lwt_id = kthds[k_id].lwt_counter++;
+    created_thread->lwt_id = lwt_counter;
+    ps_faa(&lwt_counter,1);
     created_thread->state = LWT_RUNNING;
     created_thread->parent = NULL;
     created_thread->message_data = NULL;
@@ -67,8 +69,6 @@ void __initiate(thdid_t kthd_id)
 
 void init_kthd(struct _kthd_info *kthd)
 {
-    kthd->chan_counter = 0;
-    kthd->lwt_counter = 0;
     kthd->block_counter = 0;
     kthd->zombie_counter = 0;
     kthd->nrcving = 0;

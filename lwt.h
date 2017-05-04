@@ -116,6 +116,7 @@ struct _lwt_channel
     
     /* head of linked list, serve as a reference to its sender queue */
     struct list_head sender_queue;
+    int sq_occupied;
     
     /* Linked list node, used to find its position in global channel queue */
     struct list list_node;
@@ -129,6 +130,7 @@ struct _lwt_channel
     /* buffer ring */
     struct _buffer_ring buffer;
     int size;
+    int rb_occupied;
     
     /* channel group need??*/
     lwt_cgrp_t cgroup;
@@ -200,9 +202,7 @@ typedef void * (*lwt_chan_fn_t)(lwt_chan_t);
 
 struct _kthd_info
 {
-    /* below are counters for lwt and channel for a kthd */
-    int lwt_counter;
-    int chan_counter;
+    
     /* below variables used to be global but now belongs to kthd */
     int block_counter;
     int zombie_counter;
@@ -295,5 +295,7 @@ extern int printc(char * fmt, ...);
 extern struct _kthd_info kthds[];
 extern thdid_t current_kthd;
 extern struct cos_compinfo *ci;
+extern int lwt_counter;
+extern int chan_counter;
 
 #endif

@@ -523,7 +523,7 @@ int test_file(void)
     test_multisend(ITER / 10 < 100 ? ITER / 10 : 100);
     test_grpwait(0, 15);
     test_grpwait(15, 15);
-    printc("HW3 test file complete\n");
+    printc("HW3 test file complete2\n");
     return 0;
 }
 
@@ -561,8 +561,8 @@ cos_init(void)
 	cos_defcompinfo_init();
 	sl_init();
 
-	// test_hw3();
-    test_kthd();
+	test_hw3();
+    //test_kthd();
 
     // while(1);
 	assert(0);

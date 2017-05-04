@@ -1,14 +1,6 @@
 #include "lwt.h"
 #include "umalloc.h"
 
-// int nrcving = 0;
-// int nsnding = 0;
-// int chan_counter = 0;
-
-// /* used for assigning thread and channel id */
-// int lwt_counter = 0;
-// int zombie_counter = 0;
-// int block_counter = 0;
 struct __func_param
 {
     lwt_fn_t func;
@@ -35,7 +27,8 @@ static void inline __init_chan(lwt_chan_t chan, int size)
     chan->type = LOCAL_CHAN;
     chan->receiver = lwt_current();
     chan->snd_cnt = 0;
-    chan->chan_id = kthds[current_kthd].chan_counter++;
+    chan->chan_id = chan_counter;
+    ps_faa(&chan_counter,1);
     list_head_init(&(chan->sender_queue));
 }
 
