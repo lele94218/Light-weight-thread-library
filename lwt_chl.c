@@ -174,6 +174,7 @@ int lwt_sync_snd(lwt_chan_t chan, void *data)
         {
             sl_cs_enter();
             /* someone is waiting */
+            list_rem_d(chan->receiver);
             list_head_add_d(&(kthds[remote_thdid].wakeup_queue), chan->receiver);
 
             /* add remote kernel thread polling flag */
@@ -274,6 +275,7 @@ lwt_sync_rcv(lwt_chan_t chan)
                 lwt_t sender = list_head_first_d(&(chan->sender_queue), struct _lwt_t);
                 sl_cs_enter();
                 /* move sender to its remote kernel thread wake up queue */
+                list_rem_d(sender);
                 list_head_add_d(&(kthds[remote_thdid].wakeup_queue), sender);
                 
                 /* wake up remote kthd, if it is blocked */
