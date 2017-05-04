@@ -76,16 +76,22 @@ __lwt_schedule()
     lwt_t new_thread = list_head_first_d(current_run_queue(), struct _lwt_t);
     if (kthds[current_kthd].polling_flag)
     {
+        struct __lwt_wrap * _lw = NULL;
         lwt_t _thd = NULL;
-        list_foreach_d(&kthds[current_kthd].wakeup_queue, _thd)
+        list_foreach_d(&kthds[current_kthd].wakeup_queue, _lw)
         {
-            kthds[current_kthd].nrcving -= _thd->block_for == BLOCKED_RECEIVING ? 1 : 0;
-            kthds[current_kthd].nsnding -= _thd->block_for == BLOCKED_SENDING ? 1 : 0;
-            list_rem_d(_thd);
-            _thd->state = LWT_RUNNABLE;
-            kthds[current_kthd].block_counter--;
-            list_head_append_d(owner_run_queue(), _thd);
+            _thd = _lw->thd;
+            if (_thd == LWT_BLOCKED && _thd->block_for == BLOCKED_RECEIVING)
+            {
+                kthds[current_kthd].nrcving -= _thd->block_for == BLOCKED_RECEIVING ? 1 : 0;
+                kthds[current_kthd].nsnding -= _thd->block_for == BLOCKED_SENDING ? 1 : 0;
+                _thd->state = LWT_RUNNABLE;
+                kthds[current_kthd].block_counter--;
+                list_head_append_d(owner_run_queue(), _thd);
             }
+            list_rem_d(_lw);
+            ufree(_lw);
+        }
     }
     printd("thread %d start executing from reschedule\n", new_thread->lwt_id);
     new_thread->state = LWT_RUNNING;

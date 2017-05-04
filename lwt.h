@@ -202,6 +202,13 @@ struct _lwt_cgrp
     int blocked;
 };
 
+
+struct __lwt_wrap
+{
+    struct list list_node;
+    lwt_t thd;
+};
+
 /* define a function pointer */
 typedef void * (*lwt_fn_t)(void *);
 typedef void * (*lwt_chan_fn_t)(lwt_chan_t);

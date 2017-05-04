@@ -7,6 +7,7 @@ struct __func_param
     void *data;
 };
 
+
 /* --------------- Thread communication function implementation, channelling --------------- */
 
 void __print_a_chan_queue(struct list_head *);
@@ -164,9 +165,12 @@ int lwt_sync_snd(lwt_chan_t chan, void *data)
     ((uint *)(chan->buffer.data_buffer))[chan->buffer.tail++ % chan->size] = (uint)data;
     printd("thread %d put data: %d on chan %d's buffer at location %d\n", current_thread->lwt_id, ((uint *)(chan->buffer.data_buffer))[chan->buffer.tail - 1], chan->chan_id, chan->buffer.tail);
     cas_unlock(&chan->rb_occupied);
-
+    
     cas_lock(&(kthds[remote_thdid].wq_occupied));
     //write data
+    struct __lwt_wrap * lw = umalloc(sizeof(struct __lwt_wrap));
+    lw->thd = chan->receiver;
+    list_head_add_d(&(kthds[remote_thdid].wakeup_queue), lw);
     cas_unlock(&(kthds[remote_thdid].wq_occupied));
 
     // if (chan->receiver->state == LWT_BLOCKED && chan->receiver->block_for == BLOCKED_RECEIVING && chan->receiver->now_rcving == chan)
@@ -274,21 +278,21 @@ lwt_sync_rcv(lwt_chan_t chan)
             result = (void *)(((uint *)(chan->buffer.data_buffer))[(chan->buffer.head++) % chan->size]);
             
             //chl_sq_lock(chan);
-            if (!list_head_empty(&(chan->sender_queue)))
-            {
-                lwt_t sender = list_head_first_d(&(chan->sender_queue), struct _lwt_t);
-                //chl_sq_unlock(chan);
-                /* move sender to its remote kernel thread wake up queue */
-                list_rem_d(sender);
-                list_head_add_d(&(kthds[remote_thdid].wakeup_queue), sender);
+            // if (!list_head_empty(&(chan->sender_queue)))
+            // {
+            //     lwt_t sender = list_head_first_d(&(chan->sender_queue), struct _lwt_t);
+            //     //chl_sq_unlock(chan);
+            //     /* move sender to its remote kernel thread wake up queue */
+            //     list_rem_d(sender);
+            //     list_head_add_d(&(kthds[remote_thdid].wakeup_queue), sender);
                 
-                /* wake up remote kthd, if it is blocked */
-                sl_thd_wakeup(remote_thdid);
+            //     /* wake up remote kthd, if it is blocked */
+            //     sl_thd_wakeup(remote_thdid);
 
-                kthds[remote_thdid].polling_flag = 1;
-                ((uint *)(chan->buffer.data_buffer))[(chan->buffer.tail++) % chan->size] = (uint)(sender->message_data);
-                //chl_rb_unlock(chan);
-            }
+            //     kthds[remote_thdid].polling_flag = 1;
+            //     ((uint *)(chan->buffer.data_buffer))[(chan->buffer.tail++) % chan->size] = (uint)(sender->message_data);
+            //     //chl_rb_unlock(chan);
+            // }
             //chl_sq_unlock(chan);
 
             return result;

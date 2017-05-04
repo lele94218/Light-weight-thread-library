@@ -114,27 +114,28 @@ void lwt1_test()
 {
     // printc("");
     c0 = lwt_chan(100);
-    set_chan_type(c0,LOCAL_CHAN);
+    set_chan_type(c0, GLOBAL_CHAN);
     int value = 7;
+    printc("lwt of lwt2_test try to recieving... \n", value);
     value = (void *)lwt_rcv(c0);
-    printc("lwt of one kthd has received %d \n", value);
+    printc("lwt of lwt2_test has received %d \n", value);
 }
 
 void lwt2_test()
 {
     c1 = lwt_chan(100);
-    set_chan_type(c1,LOCAL_CHAN);
-    lwt_snd(c0,(void*)8);
+    set_chan_type(c1, GLOBAL_CHAN);
+    lwt_snd(c0, (void *)8);
     // int value = (void *)lwt_rcv(c1);
-    printc("lwt of one core has sent data \n");
+    printc("lwt of lwt2_test has sent data \n");
 }
 
 void test_high(void *data)
 {
-    printc("high132\n");
+    printc("high999\n");
     struct sl_thd *t = data;
     //test code goes here:
-    t0 = lwt_create(lwt1_test, NULL,0);
+    t0 = lwt_create(lwt1_test, NULL, 0);
     printc("test high about to enter loop!\n");
     while (1)
     {
@@ -143,6 +144,7 @@ void test_high(void *data)
         // printc("%d\n", t->thdid);
         sl_thd_yield(t->thdid);
         lwt_yield(NULL);
+        
         //test_file();
         //main flow goes here for h
     }
@@ -152,7 +154,7 @@ void test_low(void *data)
 {
     printc("low\n");
     //test code goes here:
-    t1 = lwt_create(lwt2_test, NULL,0);
+    t1 = lwt_create(lwt2_test, NULL, 0);
     printc("test low about to enter loop!\n");
     while (1)
     {
