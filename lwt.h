@@ -116,6 +116,8 @@ struct _lwt_channel
     
     /* head of linked list, serve as a reference to its sender queue */
     struct list_head sender_queue;
+
+    /* lock */
     int sq_occupied;
     
     /* Linked list node, used to find its position in global channel queue */
@@ -129,7 +131,10 @@ struct _lwt_channel
     
     /* buffer ring */
     struct _buffer_ring buffer;
+
     int size;
+
+    /* lock */
     int rb_occupied;
     
     /* channel group need??*/
@@ -141,8 +146,6 @@ struct _lwt_channel
     /* mark of the channel*/
     void * mark;
 
-    /* lock */
-    int lock;
 };
 typedef struct _lwt_channel * lwt_chan_t;
 
@@ -234,6 +237,34 @@ struct list_head * owner_run_queue();
 void lwt_init_cap(struct _lwt_cap *);
 void __initiate(thdid_t);
 
+static inline void
+chl_rb_lock(lwt_chan_t c)
+{
+retry:
+    if (!ps_cas(c->rb_occupied, 0, 1)) goto retry;
+    return;
+}
+
+static inline void
+chl_rb_unlock(lwt_chan_t c)
+{
+    c->rb_occupied = 0;
+}
+
+static inline void
+chl_sq_lock(lwt_chan_t c)
+{
+retry:
+    if (!ps_cas(c->sq_occupied, 0, 1)) goto retry;
+    return;
+}
+
+static inline void
+chl_sq_unlock(lwt_chan_t c)
+{
+    c->sq_occupied = 0;
+}
+
 /* pause one thread, start executing the next one */
 static inline void
 __lwt_dispatch(struct _lwt_context *curr, struct _lwt_context *next)
@@ -285,7 +316,7 @@ void set_chan_type(lwt_chan_t chan, enum chan_type type);
 
 /* --------------- kernel thread API --------------- */
 void lwt_kthd_trampline(void *);
-int lwt_kthd_create(lwt_fn_t fn, lwt_chan_t c);
+int lwt_kthd_create(lwt_fn_t fn, lwt_chan_t c, int pri);
 int lwt_snd_thd(lwt_chan_t chan, lwt_t sending);
 lwt_t lwt_rcv_thd(lwt_chan_t chan);
 

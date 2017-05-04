@@ -161,14 +161,13 @@ int lwt_sync_snd(lwt_chan_t chan, void *data)
     int remote_thdid = chan->receiver->owner_kthd;
     lwt_t current_thread = lwt_current();
 
+    chl_rb_lock();
     if (chan->buffer.tail - chan->buffer.head != chan->size)
     {
         /* buffer is not full */
-        sl_cs_enter();
         ((uint *)(chan->buffer.data_buffer))[chan->buffer.tail++ % chan->size] = (uint)data;
-        sl_cs_exit();
-
         printd("thread %d put data: %d on chan %d's buffer at location %d\n", current_thread->lwt_id, ((uint *)(chan->buffer.data_buffer))[chan->buffer.tail - 1], chan->chan_id, chan->buffer.tail);
+        chl_rb_unlock();
 
         if (chan->receiver->state == LWT_BLOCKED && chan->receiver->block_for == BLOCKED_RECEIVING && chan->receiver->now_rcving == chan)
         {
@@ -188,11 +187,16 @@ int lwt_sync_snd(lwt_chan_t chan, void *data)
 
         return 0;
     }
+    chl_rb_unlock();
 
     /* buffer is full, add to sender queue and block */
 
     list_rem_d(current_thread);
+
+    chl_sq_lock();
     list_head_add_d(&(chan->sender_queue), current_thread);
+    chl_sq_unlock();
+    
     kthds[current_kthd].nsnding++;
     current_thread->state = LWT_BLOCKED;
     current_thread->block_for = BLOCKED_SENDING;
@@ -263,17 +267,18 @@ lwt_sync_rcv(lwt_chan_t chan)
 
     while (1)
     {
+
+        chl_rb_lock();
         if (chan->buffer.tail - chan->buffer.head != 0)
         {
             /* if buffer has data */
-            sl_cs_enter();
             result = (void *)(((uint *)(chan->buffer.data_buffer))[(chan->buffer.head++) % chan->size]);
-            sl_cs_exit();
-
+            
+            chl_sq_lock();
             if (!list_head_empty(&(chan->sender_queue)))
             {
                 lwt_t sender = list_head_first_d(&(chan->sender_queue), struct _lwt_t);
-                sl_cs_enter();
+                chl_sq_unlock();
                 /* move sender to its remote kernel thread wake up queue */
                 list_rem_d(sender);
                 list_head_add_d(&(kthds[remote_thdid].wakeup_queue), sender);
@@ -283,11 +288,13 @@ lwt_sync_rcv(lwt_chan_t chan)
 
                 kthds[remote_thdid].pooling_flag = 1;
                 ((uint *)(chan->buffer.data_buffer))[(chan->buffer.tail++) % chan->size] = (uint)(sender->message_data);
-                sl_cs_exit();
+                chl_rb_unlock();
             }
+            chl_sq_unlock();
 
             return result;
         }
+        chl_rb_unlock();
 
         /* if buffer is empty, block it.  */
         current_thread->now_rcving = chan;
@@ -475,7 +482,7 @@ void lwt_kthd_trampline(void *ptr)
     return;
 }
 
-int lwt_kthd_create(lwt_fn_t fn, lwt_chan_t c)
+int lwt_kthd_create(lwt_fn_t fn, lwt_chan_t c, int pri)
 {
     printd("-------------\n");
     struct __func_param *__fp = umalloc(sizeof(struct __func_param));
@@ -483,7 +490,7 @@ int lwt_kthd_create(lwt_fn_t fn, lwt_chan_t c)
     __fp->data = (void *)c;
     struct sl_thd *curr_kthd = sl_thd_alloc((cos_thd_fn_t)lwt_kthd_trampline, (void *)__fp);
     __initiate(curr_kthd->thdid);
-    union sched_param sph = {.c = {.type = SCHEDP_PRIO, .value = 10}};
+    union sched_param sph = {.c = {.type = SCHEDP_PRIO, .value = pri}};
     sl_thd_param_set(curr_kthd, sph.v);
     return 0;
 }
