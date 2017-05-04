@@ -39,6 +39,9 @@ typedef int t_id;
 typedef int t_stat;
 typedef int lwt_flags_t;
 
+/* struct declaration */
+struct _lwt_cgrp;
+typedef struct _lwt_cgrp * lwt_cgrp_t;
 /* User level info argument type.  */
 enum lwt_info_t
 {
@@ -94,14 +97,6 @@ struct _buffer_ring
     int tail, head, count;
     void * data_buffer;
 };
-
-/* channel group */
-struct _lwt_cgrp
-{
-    struct list_head chl_list;
-    struct list_head wait_queue;
-};
-typedef struct _lwt_cgrp * lwt_cgrp_t;
 
 /* This structure describes a lwt channel */
 struct _lwt_channel
@@ -181,6 +176,13 @@ struct _lwt_t
 
 typedef struct _lwt_t * lwt_t;
 
+/* channel group */
+struct _lwt_cgrp
+{
+    struct list_head chl_list;
+    lwt_t owner;
+    int blocked;
+};
 
 /* define a function pointer */
 typedef void * (*lwt_fn_t)(void *);
