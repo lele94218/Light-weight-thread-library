@@ -86,7 +86,10 @@ sl_thd_lkup(thdid_t tid)
 
 static inline struct sl_thd *
 sl_thd_curr(void)
-{ return sl_thd_lkup(cos_thdid()); }
+{ 
+	// return sl_thd_lkup(cos_thdid()); 
+	return sl_thd_lkup(current_kthd);
+}
 
 /* are we the owner of the critical section? */
 static inline int

@@ -316,7 +316,7 @@ void set_chan_type(lwt_chan_t chan, enum chan_type type);
 
 /* --------------- kernel thread API --------------- */
 void lwt_kthd_trampline(void *);
-int lwt_kthd_create(lwt_fn_t fn, lwt_chan_t c, int pri);
+struct sl_thd * lwt_kthd_create(lwt_fn_t fn, lwt_chan_t c, int pri);
 int lwt_snd_thd(lwt_chan_t chan, lwt_t sending);
 lwt_t lwt_rcv_thd(lwt_chan_t chan);
 

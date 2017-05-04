@@ -108,6 +108,8 @@ void
 sl_thd_yield(thdid_t tid)
 {
 	struct sl_thd *t = sl_thd_curr();
+	// struct sl_thd *t = sl_thd_lkup(current_kthd);
+	// printc("1--id: %d\n", tid);
 
 	sl_cs_enter();
 	if (tid) {

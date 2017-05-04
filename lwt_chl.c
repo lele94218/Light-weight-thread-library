@@ -482,7 +482,7 @@ void lwt_kthd_trampline(void *ptr)
     return;
 }
 
-int lwt_kthd_create(lwt_fn_t fn, lwt_chan_t c, int pri)
+struct sl_thd * lwt_kthd_create(lwt_fn_t fn, lwt_chan_t c, int pri)
 {
     printd("-------------\n");
     struct __func_param *__fp = umalloc(sizeof(struct __func_param));
@@ -492,7 +492,7 @@ int lwt_kthd_create(lwt_fn_t fn, lwt_chan_t c, int pri)
     __initiate(curr_kthd->thdid);
     union sched_param sph = {.c = {.type = SCHEDP_PRIO, .value = pri}};
     sl_thd_param_set(curr_kthd, sph.v);
-    return 0;
+    return curr_kthd;
 }
 
 int lwt_snd_thd(lwt_chan_t chan, lwt_t sending)
