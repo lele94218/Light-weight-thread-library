@@ -241,7 +241,7 @@ static inline void
 chl_rb_lock(lwt_chan_t c)
 {
 retry:
-    if (!ps_cas(c->rb_occupied, 0, 1)) goto retry;
+    if (!ps_cas(&c->rb_occupied, 0, 1)) goto retry;
     return;
 }
 
@@ -255,7 +255,7 @@ static inline void
 chl_sq_lock(lwt_chan_t c)
 {
 retry:
-    if (!ps_cas(c->sq_occupied, 0, 1)) goto retry;
+    if (!ps_cas(&c->sq_occupied, 0, 1)) goto retry;
     return;
 }
 
