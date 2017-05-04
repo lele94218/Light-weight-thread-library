@@ -191,9 +191,6 @@ void test_perf(void)
     rdtscll(end);
 
     printc("[PERF] %5lld <- fork/join\n", (end - start) / ITER);
-    printc("%d\n",lwt_info(LWT_INFO_NTHD_RUNNABLE));
-    printc("%d\n",lwt_info(LWT_INFO_NTHD_ZOMBIES));
-    printc("%d\n",lwt_info(LWT_INFO_NTHD_BLOCKED));
     IS_RESET();
 
     chld1 = lwt_create(fn_bounce, (void *)1, 0);
@@ -252,7 +249,6 @@ fn_join(void *d)
     void *r;
 
     r = lwt_join(d);
-    printc("return value is %d \n", (int)r);
     assert(r != (void *)0x37337);
 }
 
@@ -440,7 +436,7 @@ void test_perf_async_steam(int chsz)
     assert(LWT_RUNNING == lwt_current()->state);
 
     from = lwt_chan(chsz);
-    printc("chsz size: %d---------------\n", chsz);
+    printc("chsz size: %d\n", chsz);
     assert(from);
     t = lwt_create_chan(fn_async_steam, from);
     assert(lwt_info(LWT_INFO_NTHD_RUNNABLE) == 2);
@@ -522,7 +518,6 @@ void test_grpwait(int chsz, int grpsz)
         lwt_chan_deref(cs[i]);
     }
     assert(!lwt_cgrp_free(g));
-    printc("-------ok-----\n");
     return;
 }
 
@@ -538,7 +533,7 @@ int test_file(void)
     test_multisend(ITER / 10 < 100 ? ITER / 10 : 100);
     test_grpwait(0, 15);
     test_grpwait(15, 15);
-
+    printc("done debugging222222222222222222222\n");
     return 0;
 }
 

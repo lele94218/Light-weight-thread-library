@@ -81,6 +81,13 @@ enum block_status
     BLOCKED_SENDING,
 };
 
+enum chan_type
+{
+    /* The channel is only used for threads within one kernel threads. */
+    LOCAL_CHAN = 0,
+    /* This channel is accessed by multiple kernel threads. */
+    GLOBAL_CHAN,
+};
 
 
 /* define the context of a thread */
@@ -101,6 +108,9 @@ struct _lwt_channel
 {
     /* channel ID */
     int chan_id;
+
+    /* channel type */
+    enum chan_type type;
     
     /* head of linked list, serve as a reference to its sender queue */
     struct list_head sender_queue;
@@ -264,6 +274,7 @@ lwt_chan_t lwt_cgrp_wait (lwt_cgrp_t cgrp);
 
 void lwt_chan_mark_set(lwt_chan_t, void *);
 void *lwt_chan_mark_get(lwt_chan_t);
+void set_chan_type(lwt_chan_t chan, enum chan_type type);
 
 /* --------------- kernel thread API --------------- */
 void lwt_kthd_trampline(void *);
