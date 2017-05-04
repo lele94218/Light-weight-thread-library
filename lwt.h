@@ -214,7 +214,7 @@ struct _kthd_info
     int zombie_counter;
     int nrcving;
     int nsnding;
-    int pooling_flag;
+    int polling_flag;
     lwt_t current_thread;
     lwt_t main_thread;
     struct list_head run_queue;

@@ -46,7 +46,7 @@ __lwt_schedule()
 {
     lwt_t old_thread = lwt_current();
     lwt_t new_thread = list_head_first_d(current_run_queue(), struct _lwt_t);
-    if (list_head_empty(current_run_queue()) || kthds[current_kthd].pooling_flag)
+    if (list_head_empty(current_run_queue()) || kthds[current_kthd].polling_flag)
     {
         printc("no thread in run queue or pooling is needed\n");
         new_thread = kthds[current_kthd].main_thread;
@@ -73,7 +73,7 @@ void init_kthd(struct _kthd_info *kthd)
     kthd->zombie_counter = 0;
     kthd->nrcving = 0;
     kthd->nsnding = 0;
-    kthd->pooling_flag = 0;
+    kthd->polling_flag = 0;
     list_head_init(&kthd->run_queue);
     list_head_init(&kthd->recycle_queue);
     list_head_init(&kthd->wakeup_queue);

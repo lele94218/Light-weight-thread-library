@@ -177,7 +177,7 @@ int lwt_sync_snd(lwt_chan_t chan, void *data)
             list_head_add_d(&(kthds[remote_thdid].wakeup_queue), chan->receiver);
 
             /* add remote kernel thread polling flag */
-            kthds[remote_thdid].pooling_flag = 1;
+            kthds[remote_thdid].polling_flag = 1;
 
             /* wake up remote kthd, if it is blocked */
             sl_thd_wakeup(remote_thdid);
@@ -286,7 +286,7 @@ lwt_sync_rcv(lwt_chan_t chan)
                 /* wake up remote kthd, if it is blocked */
                 sl_thd_wakeup(remote_thdid);
 
-                kthds[remote_thdid].pooling_flag = 1;
+                kthds[remote_thdid].polling_flag = 1;
                 ((uint *)(chan->buffer.data_buffer))[(chan->buffer.tail++) % chan->size] = (uint)(sender->message_data);
                 chl_rb_unlock(chan);
             }
