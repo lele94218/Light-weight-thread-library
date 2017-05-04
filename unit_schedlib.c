@@ -110,17 +110,39 @@ void test_yields(void)
         sl_thd_param_set(threads[i], sp.v);
     }
 }
+void lwt1_test()
+{
+    // printc("");
+    c0 = lwt_chan(100);
+    // set_chan_type(c0,LOCAL_CHAN);
+    // lwt_snd(c1,(void*)7);
+    // int value = (void *)lwt_rcv(c0);
+    // printc("lwt of one kthd has received %d \n", value);
+}
+
+void lwt2_test()
+{
+    c1 = lwt_chan(100);
+    // set_chan_type(c1,LOCAL_CHAN);
+    // lwt_snd(c0,(void*)8);
+    // int value = (void *)lwt_rcv(c1);
+    // printc("lwt of another kthd has received %d \n", value);
+}
 
 void test_high(void *data)
 {
-    printc("high\n");
+    printc("high122226\n");
     struct sl_thd *t = data;
+    //test code goes here:
+    t0 = lwt_create(lwt1_test, NULL,0);
+    printc("test high about to enter loop!\n");
     while (1)
     {
         printc("h");
         assert(t);
         // printc("%d\n", t->thdid);
         sl_thd_yield(t->thdid);
+        __lwt_schedule();
         //test_file();
         //main flow goes here for h
     }
@@ -129,11 +151,15 @@ void test_high(void *data)
 void test_low(void *data)
 {
     printc("low\n");
+    //test code goes here:
+    t1 = lwt_create(lwt2_test, NULL,0);
+    printc("test low about to enter loop!\n");
     while (1)
     {
         int workiters = WORKITERS * 10;
         SPIN(workiters);
         printc("l");
+        __lwt_schedule();
         //main flow goes here for h
     }
 }

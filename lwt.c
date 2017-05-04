@@ -46,10 +46,18 @@ __lwt_schedule()
 {
     lwt_t old_thread = lwt_current();
     lwt_t new_thread = list_head_first_d(current_run_queue(), struct _lwt_t);
-    if (list_head_empty(current_run_queue()) || kthds[current_kthd].polling_flag)
+    if (kthds[current_kthd].polling_flag)
     {
-        printc("no thread in run queue or pooling is needed\n");
-        new_thread = kthds[current_kthd].main_thread;
+        lwt_t _thd = NULL;
+        list_foreach_d(&kthds[current_kthd].wakeup_queue, _thd)
+        {
+            kthds[current_kthd].nrcving -= _thd->block_for == BLOCKED_RECEIVING ? 1 : 0;
+            kthds[current_kthd].nsnding -= _thd->block_for == BLOCKED_SENDING ? 1 : 0;
+            list_rem_d(_thd);
+            _thd->state = LWT_RUNNABLE;
+            kthds[current_kthd].block_counter--;
+            list_head_append_d(owner_run_queue(), _thd);
+            }
     }
     printd("thread %d start executing from reschedule\n", new_thread->lwt_id);
     new_thread->state = LWT_RUNNING;
@@ -65,6 +73,7 @@ void __initiate(thdid_t kthd_id)
     __init_thread(kthds[kthd_id].current_thread, kthd_id);
     kthds[kthd_id].current_thread->state = LWT_RUNNING;
     kthds[kthd_id].main_thread = kthds[kthd_id].current_thread;
+    list_head_append_d(&kthds[kthd_id].run_queue, kthds[kthd_id].current_thread);
 }
 
 void init_kthd(struct _kthd_info *kthd)

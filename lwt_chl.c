@@ -446,37 +446,18 @@ lwt_chan_mark_get(lwt_chan_t chan)
 /* --------------- kernel thread API --------------- */
 void lwt_kthd_trampline(void *ptr)
 {
-    lwt_create(((struct __func_param *)ptr)->func, (void *)(((struct __func_param *)ptr)->data), 0);
+    ((struct __func_param *)ptr)->func((void *)(((struct __func_param *)ptr)->data));
+    //lwt_create(((struct __func_param *)ptr)->func, (void *)(((struct __func_param *)ptr)->data), 0);
     ufree(ptr);
     while (1)
     {
-        lwt_t thd = list_head_first_d(current_run_queue(), struct _lwt_t);
-        if (!list_head_empty(current_run_queue()))
-        {
-            /* has lwt in run queue */
-
-            thd->state = LWT_RUNNING;
-            kthds[current_kthd].current_thread = thd;
-            __lwt_dispatch(&(kthds[current_kthd].main_thread)->context, &thd->context);
-
-            /* polling wakeup list and add them to runqueue */
-            lwt_t _thd = NULL;
-            list_foreach_d(&kthds[current_kthd].wakeup_queue, _thd)
-            {
-                kthds[current_kthd].nrcving -= _thd->block_for == BLOCKED_RECEIVING ? 1 : 0;
-                kthds[current_kthd].nsnding -= _thd->block_for == BLOCKED_SENDING ? 1 : 0;
-                list_rem_d(_thd);
-                _thd->state = LWT_RUNNABLE;
-                kthds[current_kthd].block_counter--;
-                list_head_append_d(owner_run_queue(), _thd);
-            }
-        }
-        else
+        if (__get_queue_size(current_run_queue())==1)
         {
             printc("block kthd: %d!\n", current_kthd);
             /* block kthd */
             sl_thd_block(0);
             sl_thd_yield(NULL);
+            __lwt_schedule();
         }
     }
     return;
