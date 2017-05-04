@@ -129,10 +129,9 @@ int lwt_snd(lwt_chan_t chan, void *data)
         return 0;
     }
     chan->ready = 1;
-    if (chan->cgroup && (!list_head_empty(&chan->cgroup->wait_queue)))
+    if (chan->cgroup && (chan->cgroup->blocked))
     {
-        lwt_t waiter = list_head_first_d(&(chan->cgroup->wait_queue), struct _lwt_t);
-        __resume_thread(waiter);
+        __resume_thread(chan->cgroup->owner);
     }
     if (chan->buffer.tail - chan->buffer.head != chan->size)
     {
@@ -225,7 +224,8 @@ lwt_cgrp(void)
     if (!cgrp)
         return LWT_NULL;
     list_head_init(&cgrp->chl_list);
-    list_head_init(&cgrp->wait_queue);
+    cgrp->owner=lwt_current();
+    cgrp->blocked=0;
     printd("channel group created \n");
     return cgrp;
 }
@@ -276,6 +276,7 @@ int lwt_cgrp_free(lwt_cgrp_t cgrp)
     {
         node->cgroup = NULL;
     }
+
     ufree(cgrp);
     printd("a group has been freed! \n");
     return 0;
@@ -300,15 +301,17 @@ lwt_cgrp_wait(lwt_cgrp_t cgrp)
             printd("channel %d with status %d\n.", chan->chan_id, chan->ready);
             if (chan->ready == 1)
             {
+                cgrp->blocked=0;
                 printd("exit waiting from a channel group with channel %d returned.\n", chan->chan_id);
                 return chan;
             }
         }
+        cgrp->blocked=1;
         list_rem_d(current_thread);
-        list_head_add_d(&cgrp->wait_queue, current_thread);
         kthds[current_kthd].block_counter++;
         kthds[current_kthd].nrcving++;
         current_thread->state = LWT_BLOCKED;
+        cgrp->blocked=1;
         current_thread->block_for = BLOCKED_RECEIVING;
         lwt_yield(NULL);
     }

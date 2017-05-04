@@ -237,13 +237,13 @@ void
 sl_sched_loop(void)
 {
 	while (1) {
-		printc("looping...\n");
+		// printc("looping...\n");
 		int pending;
 
 		sl_cs_enter();
 
 		do {
-			printc("pending...\n");
+			// printc("pending...\n");
 			thdid_t        tid;
 			int            blocked;
 			cycles_t       cycles;
