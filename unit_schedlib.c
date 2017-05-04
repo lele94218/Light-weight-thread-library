@@ -24,6 +24,8 @@
 #define ITER 1000
 struct cos_compinfo *ci;
 
+lwt_t t0,t1,t2,t3,t4,t5;
+lwt_chan_t c0,c1,c2,c3,c4,c5;
 static void
 cos_llprint(char *s, int len)
 { call_cap(PRINT_CAP_TEMP, (int)s, len, 0, 0); }
@@ -89,6 +91,8 @@ test_high(void *data)
 	while (1) {
 		sl_thd_yield(t->thdid);
 		printc("h");
+        //test_file();
+        //main flow goes here for h
 	}
 }
 
@@ -99,6 +103,7 @@ test_low(void *data)
 		int workiters = WORKITERS * 10;
 		SPIN(workiters);
 		printc("l");
+        //main flow goes here for h
 	}
 }
 
@@ -116,20 +121,6 @@ test_lwt(int a)
 #define rdtscll(val) __asm__ __volatile__("rdtsc" \
                                           : "=A"(val))
 
-
-/*
- * My output on an Intel Core i5-2520M CPU @ 2.50GHz:
- *
- * [PERF] 120 <- fork/join
- * [PERF] 13 <- yield
- * [TEST] thread creation/join/scheduling
- * [PERF] 48 <- snd+rcv (buffer size 0)
- * [TEST] multisend (channel buffer size 0)
- * [PERF] 27 <- asynchronous snd->rcv (buffer size 100)
- * [TEST] multisend (channel buffer size 100)
- * [TEST] group wait (channel buffer size 0, grpsz 3)
- * [TEST] group wait (channel buffer size 3, grpsz 3)
- */
 
 void *
 fn_bounce(void *d)
@@ -531,7 +522,7 @@ int test_file(void)
 void
 test_hw3(void)
 {
-	lwt_kthd_create(test_file, NULL);
+	lwt_kthd_create(test_file, NULL,5);
 	sl_sched_loop();
 }
 
@@ -542,10 +533,14 @@ test_kthd(void)
 	struct sl_thd          *low, *high;
 	union sched_param       sph = {.c = {.type = SCHEDP_PRIO, .value = 5}};
 	union sched_param       spl = {.c = {.type = SCHEDP_PRIO, .value = 10}};
-	low  = sl_thd_alloc(test_low, NULL);
-	high = sl_thd_alloc(test_high, low);
-	sl_thd_param_set(low, spl.v);
-    sl_thd_param_set(high, sph.v);
+    lwt_thd_create(test_low, NULL, 5);
+    lwt_thd_create(test_high, NULL, 10);
+    printc("ready to begin!\n");
+    // low = 
+	// low  = sl_thd_alloc(test_low, NULL);
+	// high = sl_thd_alloc(test_high, low);
+	// sl_thd_param_set(low, spl.v);
+    // sl_thd_param_set(high, sph.v);
     sl_sched_loop();
     
 }
@@ -561,8 +556,8 @@ cos_init(void)
 	cos_defcompinfo_init();
 	sl_init();
 
-	test_hw3();
-    //test_kthd();
+	//test_hw3();
+    test_kthd();
 
     // while(1);
 	assert(0);
