@@ -165,40 +165,44 @@ int lwt_sync_snd(lwt_chan_t chan, void *data)
     printd("thread %d put data: %d on chan %d's buffer at location %d\n", current_thread->lwt_id, ((uint *)(chan->buffer.data_buffer))[chan->buffer.tail - 1], chan->chan_id, chan->buffer.tail);
     cas_unlock(&chan->rb_occupied);
 
-    if (chan->receiver->state == LWT_BLOCKED && chan->receiver->block_for == BLOCKED_RECEIVING && chan->receiver->now_rcving == chan)
-    {
-        //sl_cs_enter();
-        /* someone is waiting */
-        list_rem_d(chan->receiver);
-        cas_lock(&(kthds[remote_thdid].wq_occupied));
-        list_head_add_d(&(kthds[remote_thdid].wakeup_queue), chan->receiver);
-        /* add remote kernel thread polling flag */
-        kthds[remote_thdid].polling_flag = 1;
-        cas_unlock(&(kthds[remote_thdid].wq_occupied));
-        /* wake up remote kthd, if it is blocked */
-        sl_thd_wakeup(remote_thdid);
+    cas_lock(&(kthds[remote_thdid].wq_occupied));
+    //write data
+    cas_unlock(&(kthds[remote_thdid].wq_occupied));
+
+    // if (chan->receiver->state == LWT_BLOCKED && chan->receiver->block_for == BLOCKED_RECEIVING && chan->receiver->now_rcving == chan)
+    // {
+    //     //sl_cs_enter();
+    //     /* someone is waiting */
+    //     list_rem_d(chan->receiver);
+    //     cas_lock(&(kthds[remote_thdid].wq_occupied));
+    //     list_head_add_d(&(kthds[remote_thdid].wakeup_queue), chan->receiver);
+    //     /* add remote kernel thread polling flag */
+    //     kthds[remote_thdid].polling_flag = 1;
+    //     cas_unlock(&(kthds[remote_thdid].wq_occupied));
+    //     /* wake up remote kthd, if it is blocked */
+    //     sl_thd_wakeup(remote_thdid);
             
-            //sl_cs_exit();
-        }
+    //         //sl_cs_exit();
+    //     }
 
-        return 0;
-    }
-    cas_unlock(&chan->rb_occupied);
+    //     return 0;
+    // }
+    // cas_unlock(&chan->rb_occupied);
 
-    /* buffer is full, add to sender queue and block */
+    // /* buffer is full, add to sender queue and block */
 
-    list_rem_d(current_thread);
+    // list_rem_d(current_thread);
 
-    //chl_sq_lock(chan);
-    list_head_add_d(&(chan->sender_queue), current_thread);
-    //chl_sq_unlock(chan);
+    // //chl_sq_lock(chan);
+    // list_head_add_d(&(chan->sender_queue), current_thread);
+    // //cas_unlock(chan);
     
-    kthds[current_kthd].nsnding++;
-    current_thread->state = LWT_BLOCKED;
-    current_thread->block_for = BLOCKED_SENDING;
-    kthds[current_kthd].block_counter++;
+    // kthds[current_kthd].nsnding++;
+    // current_thread->state = LWT_BLOCKED;
+    // current_thread->block_for = BLOCKED_SENDING;
+    // kthds[current_kthd].block_counter++;
 
-    lwt_yield(NULL);
+    // lwt_yield(NULL);
 
     return 0;
 }
