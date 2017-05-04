@@ -120,7 +120,8 @@ int lwt_snd(lwt_chan_t chan, void *data)
 {
     if(chan->receiver->owner_kthd != lwt_current()->owner_kthd)
     {
-        return lwt_sync_snd(lwt_chan_t chan, void *data);
+        set_chan_type(chan, GLOBAL_CHAN);
+        return lwt_sync_snd(chan, data);
     }
     lwt_t current_thread = lwt_current();
     if (unlikely(chan->receiver == NULL))
@@ -169,6 +170,7 @@ int lwt_sync_snd(lwt_chan_t chan, void *data)
         return -1;
     }
 
+    sl_cs_enter();
     if (chan->receiver->state == LWT_BLOCKED && chan->receiver->block_for == BLOCKED_RECEIVING && chan->receiver->now_rcving == chan)
     {
         /* someone is waiting */
@@ -176,40 +178,48 @@ int lwt_sync_snd(lwt_chan_t chan, void *data)
         printd("thread %d has send data %d to channel %d and it has recevier thread %d.\n", current_thread->lwt_id, (int)data, chan->chan_id, chan->receiver->lwt_id);
         __resume_thread(chan->receiver);
         printd("thread %d done sending data: %d and keep running.\n", current_thread->lwt_id, (int)data);
-
+        sl_cs_exit();
         return 0;
     }
+    sl_cs_exit();
+
     chan->ready = 1;
+
+    sl_cs_enter();
     if (chan->cgroup && (chan->cgroup->blocked))
     {
         __resume_thread(chan->cgroup->owner);
     }
+    sl_cs_exit();
+
+    sl_cs_enter();
     if (chan->buffer.tail - chan->buffer.head != chan->size)
     {
         /* buffer is not full */
         ((uint *)(chan->buffer.data_buffer))[chan->buffer.tail++ % chan->size] = (uint)data;
         printd("thread %d put data: %d on chan %d's buffer at location %d\n", current_thread->lwt_id, ((uint *)(chan->buffer.data_buffer))[chan->buffer.tail - 1], chan->chan_id, chan->buffer.tail);
+        sl_cs_exit();
         return 0;
     }
+    sl_cs_exit();
 
     /* buffer doesn't have space */
+    sl_cs_enter();
     current_thread->message_data = data;
     printd("thread: %d block for sending on channel: %d buffer doesn't have space. \n", current_thread->lwt_id, chan->chan_id);
     __block_thread(current_thread, BLOCKED_SENDING, chan);
-
+    sl_cs_exit();
     return 0;
-
-
-
-
-
-
 }
 
 /* receive data from a channel, if no sender queueing, block the thread and wait till data sent by the sender */
 void *
 lwt_rcv(lwt_chan_t chan)
 {
+    if(chan->type==GLOBAL_CHAN)
+    {
+        return lwt_sync_rcv(chan);
+    }
     void *result;
     lwt_t current_thread = lwt_current();
     /* receive data from buffer */
@@ -245,6 +255,43 @@ lwt_rcv(lwt_chan_t chan)
         return result;
     }
 
+    /* block it self */
+    printd("thread %d is receiving at channel: %d but waiting for a sender.\n", current_thread->lwt_id, chan->chan_id);
+    current_thread->now_rcving = chan;
+    __block_thread(current_thread, BLOCKED_RECEIVING, chan);
+    return current_thread->message_data;
+}
+
+void * lwt_sync_rcv(lwt_chan_t chan)
+{
+    void *result;
+    lwt_t current_thread = lwt_current();
+    /* receive data from buffer */
+    if (chan->buffer.tail - chan->buffer.head != 0)
+    {
+        result = (void *)(((uint *)(chan->buffer.data_buffer))[(chan->buffer.head++) % chan->size]);
+        printd("thread %d has received data %d from channel %d.\n", current_thread->lwt_id, (int)result, chan->chan_id);
+
+        /* sender queue not empty, free one, move its data to buffer */
+        sl_cs_enter();
+        if (!list_head_empty(&(chan->sender_queue)))
+        {
+            lwt_t sender = list_head_first_d(&(chan->sender_queue), struct _lwt_t);
+            __resume_thread(sender);
+
+            ((uint *)(chan->buffer.data_buffer))[(chan->buffer.tail++) % chan->size] = (uint)(sender->message_data);
+            printd("sender %d has been freed and wrote data %d to channel %d.\n", sender->lwt_id, (int)sender->message_data, chan->chan_id);
+        }
+        sl_cs_exit();
+
+        sl_cs_enter();
+        /* update channel status */
+        chan->ready = chan->buffer.head == chan->buffer.tail ? 0 : 1;
+        printd("now channel %d status is %d.\n", chan->chan_id, chan->ready);
+        sl_cs_exit();
+        return result;
+    }
+    
     /* block it self */
     printd("thread %d is receiving at channel: %d but waiting for a sender.\n", current_thread->lwt_id, chan->chan_id);
     current_thread->now_rcving = chan;
