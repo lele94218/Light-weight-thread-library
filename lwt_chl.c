@@ -182,8 +182,13 @@ int lwt_sync_snd(lwt_chan_t chan, void *data)
             sl_cs_enter();
             /* someone is waiting */
             list_head_add_d(&(kthds[remote_thdid].wakeup_queue), chan->receiver);
+
             /* add remote kernel thread polling flag */
             kthds[remote_thdid].pooling_flag = 1;
+
+            /* wake up remote kthd, if it is blocked */
+            sl_thd_wakeup(remote_thdid);
+            
             sl_cs_exit();
         }
 
@@ -277,6 +282,10 @@ lwt_sync_rcv(lwt_chan_t chan)
                 sl_cs_enter();
                 /* move sender to its remote kernel thread wake up queue */
                 list_head_add_d(&(kthds[remote_thdid].wakeup_queue), sender);
+                
+                /* wake up remote kthd, if it is blocked */
+                sl_thd_wakeup(remote_thdid);
+
                 kthds[remote_thdid].pooling_flag = 1;
                 ((uint *)(chan->buffer.data_buffer))[(chan->buffer.tail++) % chan->size] = (uint)(sender->message_data);
                 sl_cs_exit();
