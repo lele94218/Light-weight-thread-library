@@ -111,9 +111,8 @@ void __resume_thread(lwt_t thread)
 /* send data through a channel, block sender until receiver received the data */
 int lwt_snd(lwt_chan_t chan, void *data)
 {
-    if (chan->receiver->owner_kthd != lwt_current()->owner_kthd)
+    if (chan->type == GLOBAL_CHAN)
     {
-        printc("Global sending!\n");
         set_chan_type(chan, GLOBAL_CHAN);
         return lwt_sync_snd(chan, data);
     }
@@ -161,41 +160,38 @@ int lwt_sync_snd(lwt_chan_t chan, void *data)
     int remote_thdid = chan->receiver->owner_kthd;
     lwt_t current_thread = lwt_current();
 
-    chl_rb_lock(chan);
-    if (chan->buffer.tail - chan->buffer.head != chan->size)
+    cas_lock(&chan->rb_occupied);
+    ((uint *)(chan->buffer.data_buffer))[chan->buffer.tail++ % chan->size] = (uint)data;
+    printd("thread %d put data: %d on chan %d's buffer at location %d\n", current_thread->lwt_id, ((uint *)(chan->buffer.data_buffer))[chan->buffer.tail - 1], chan->chan_id, chan->buffer.tail);
+    cas_unlock(&chan->rb_occupied);
+
+    if (chan->receiver->state == LWT_BLOCKED && chan->receiver->block_for == BLOCKED_RECEIVING && chan->receiver->now_rcving == chan)
     {
-        /* buffer is not full */
-        ((uint *)(chan->buffer.data_buffer))[chan->buffer.tail++ % chan->size] = (uint)data;
-        printd("thread %d put data: %d on chan %d's buffer at location %d\n", current_thread->lwt_id, ((uint *)(chan->buffer.data_buffer))[chan->buffer.tail - 1], chan->chan_id, chan->buffer.tail);
-        chl_rb_unlock(chan);
-
-        if (chan->receiver->state == LWT_BLOCKED && chan->receiver->block_for == BLOCKED_RECEIVING && chan->receiver->now_rcving == chan)
-        {
-            sl_cs_enter();
-            /* someone is waiting */
-            list_rem_d(chan->receiver);
-            list_head_add_d(&(kthds[remote_thdid].wakeup_queue), chan->receiver);
-
-            /* add remote kernel thread polling flag */
-            kthds[remote_thdid].polling_flag = 1;
-
-            /* wake up remote kthd, if it is blocked */
-            sl_thd_wakeup(remote_thdid);
+        //sl_cs_enter();
+        /* someone is waiting */
+        list_rem_d(chan->receiver);
+        cas_lock(&(kthds[remote_thdid].wq_occupied));
+        list_head_add_d(&(kthds[remote_thdid].wakeup_queue), chan->receiver);
+        /* add remote kernel thread polling flag */
+        kthds[remote_thdid].polling_flag = 1;
+        cas_unlock(&(kthds[remote_thdid].wq_occupied));
+        /* wake up remote kthd, if it is blocked */
+        sl_thd_wakeup(remote_thdid);
             
-            sl_cs_exit();
+            //sl_cs_exit();
         }
 
         return 0;
     }
-    chl_rb_unlock(chan);
+    cas_unlock(&chan->rb_occupied);
 
     /* buffer is full, add to sender queue and block */
 
     list_rem_d(current_thread);
 
-    chl_sq_lock(chan);
+    //chl_sq_lock(chan);
     list_head_add_d(&(chan->sender_queue), current_thread);
-    chl_sq_unlock(chan);
+    //chl_sq_unlock(chan);
     
     kthds[current_kthd].nsnding++;
     current_thread->state = LWT_BLOCKED;
@@ -213,7 +209,6 @@ lwt_rcv(lwt_chan_t chan)
 {
     if (chan->type == GLOBAL_CHAN)
     {
-        printc("Global rcving!\n");
         return lwt_sync_rcv(chan);
     }
     void *result;
@@ -268,17 +263,17 @@ lwt_sync_rcv(lwt_chan_t chan)
     while (1)
     {
 
-        chl_rb_lock(chan);
+        //chl_rb_lock(chan);
         if (chan->buffer.tail - chan->buffer.head != 0)
         {
             /* if buffer has data */
             result = (void *)(((uint *)(chan->buffer.data_buffer))[(chan->buffer.head++) % chan->size]);
             
-            chl_sq_lock(chan);
+            //chl_sq_lock(chan);
             if (!list_head_empty(&(chan->sender_queue)))
             {
                 lwt_t sender = list_head_first_d(&(chan->sender_queue), struct _lwt_t);
-                chl_sq_unlock(chan);
+                //chl_sq_unlock(chan);
                 /* move sender to its remote kernel thread wake up queue */
                 list_rem_d(sender);
                 list_head_add_d(&(kthds[remote_thdid].wakeup_queue), sender);
@@ -288,13 +283,13 @@ lwt_sync_rcv(lwt_chan_t chan)
 
                 kthds[remote_thdid].polling_flag = 1;
                 ((uint *)(chan->buffer.data_buffer))[(chan->buffer.tail++) % chan->size] = (uint)(sender->message_data);
-                chl_rb_unlock(chan);
+                //chl_rb_unlock(chan);
             }
-            chl_sq_unlock(chan);
+            //chl_sq_unlock(chan);
 
             return result;
         }
-        chl_rb_unlock(chan);
+        //chl_rb_unlock(chan);
 
         /* if buffer is empty, block it.  */
         current_thread->now_rcving = chan;

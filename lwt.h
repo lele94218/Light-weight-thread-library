@@ -220,6 +220,7 @@ struct _kthd_info
     struct list_head run_queue;
     struct list_head recycle_queue;
     struct list_head wakeup_queue;
+    int wq_occupied;
 };
 
 
@@ -238,62 +239,20 @@ void lwt_init_cap(struct _lwt_cap *);
 void __initiate(thdid_t);
 
 static inline void
-chl_rb_lock(lwt_chan_t c)
+cas_lock(int * c)
 {
 retry:
-    if (!ps_cas(&c->rb_occupied, 0, 1)) goto retry;
+    if (!ps_cas(c, 0, 1)) goto retry;
     return;
 }
 
 static inline void
-chl_rb_unlock(lwt_chan_t c)
+cas_unlock(int * c)
 {
-    c->rb_occupied = 0;
+    *c = 0;
 }
 
-static inline void
-chl_sq_lock(lwt_chan_t c)
-{
-retry:
-    if (!ps_cas(&c->sq_occupied, 0, 1)) goto retry;
-    return;
-}
 
-static inline void
-chl_sq_unlock(lwt_chan_t c)
-{
-    c->sq_occupied = 0;
-}
-
-/* pause one thread, start executing the next one */
-static inline void
-__lwt_dispatch(struct _lwt_context *curr, struct _lwt_context *next)
-{
-    __asm__ __volatile__(
-        //        "push %%ebx;"
-        //        "push %%edi;"
-        //        "push %%esi;"
-        //        "push %%ebp;"
-        //        "push %%eax;"
-        "pushal;"
-        "movl %%esp,%0;"
-        "movl $retDispatch%=,%1;"
-        "movl %2,%%esp;"
-        "jmp *%3;"
-        "retDispatch%=:;"
-        "popal;"
-        //        "pop %%eax;"
-        //        "pop %%ebp;"
-        //        "pop %%esi;"
-        //        "pop %%edi;"
-        //        "pop %%ebx;"
-        : "=m"(curr->sp), "=m"(curr->ip)
-        : "m"(next->sp), "m"(next->ip)
-        : "cc", "memory"
-        //        : "ebx", "edi", "esi", "ebp", "eax", "memory"
-
-        );
-}
 
 /* --------------------------- Function declaration for lwt thread channel operation --------------------------- */
 lwt_chan_t lwt_chan (int sz);

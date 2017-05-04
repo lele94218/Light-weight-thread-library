@@ -38,7 +38,35 @@ __init_thread(lwt_t created_thread,thdid_t k_id)
 
 /* --------------- Major thread-function implementations --------------- */
 
+/* pause one thread, start executing the next one */
+static inline void
+__lwt_dispatch(struct _lwt_context *curr, struct _lwt_context *next)
+{
+    __asm__ __volatile__(
+        //        "push %%ebx;"
+        //        "push %%edi;"
+        //        "push %%esi;"
+        //        "push %%ebp;"
+        //        "push %%eax;"
+        "pushal;"
+        "movl %%esp,%0;"
+        "movl $retDispatch%=,%1;"
+        "movl %2,%%esp;"
+        "jmp *%3;"
+        "retDispatch%=:;"
+        "popal;"
+        //        "pop %%eax;"
+        //        "pop %%ebp;"
+        //        "pop %%esi;"
+        //        "pop %%edi;"
+        //        "pop %%ebx;"
+        : "=m"(curr->sp), "=m"(curr->ip)
+        : "m"(next->sp), "m"(next->ip)
+        : "cc", "memory"
+        //        : "ebx", "edi", "esi", "ebp", "eax", "memory"
 
+        );
+}
 
 /* find one runnable thread and execute it */
 inline void
@@ -82,6 +110,7 @@ void init_kthd(struct _kthd_info *kthd)
     kthd->zombie_counter = 0;
     kthd->nrcving = 0;
     kthd->nsnding = 0;
+    kthd->wq_occupied=0;
     kthd->polling_flag = 0;
     list_head_init(&kthd->run_queue);
     list_head_init(&kthd->recycle_queue);

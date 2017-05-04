@@ -114,24 +114,24 @@ void lwt1_test()
 {
     // printc("");
     c0 = lwt_chan(100);
-    // set_chan_type(c0,LOCAL_CHAN);
-    // lwt_snd(c1,(void*)7);
-    // int value = (void *)lwt_rcv(c0);
-    // printc("lwt of one kthd has received %d \n", value);
+    set_chan_type(c0,LOCAL_CHAN);
+    int value = 7;
+    value = (void *)lwt_rcv(c0);
+    printc("lwt of one kthd has received %d \n", value);
 }
 
 void lwt2_test()
 {
     c1 = lwt_chan(100);
-    // set_chan_type(c1,LOCAL_CHAN);
-    // lwt_snd(c0,(void*)8);
+    set_chan_type(c1,LOCAL_CHAN);
+    lwt_snd(c0,(void*)8);
     // int value = (void *)lwt_rcv(c1);
-    // printc("lwt of another kthd has received %d \n", value);
+    printc("lwt of one core has sent data \n");
 }
 
 void test_high(void *data)
 {
-    printc("high122226\n");
+    printc("high132\n");
     struct sl_thd *t = data;
     //test code goes here:
     t0 = lwt_create(lwt1_test, NULL,0);
@@ -142,7 +142,7 @@ void test_high(void *data)
         assert(t);
         // printc("%d\n", t->thdid);
         sl_thd_yield(t->thdid);
-        __lwt_schedule();
+        lwt_yield(NULL);
         //test_file();
         //main flow goes here for h
     }
@@ -159,7 +159,7 @@ void test_low(void *data)
         int workiters = WORKITERS * 10;
         SPIN(workiters);
         printc("l");
-        __lwt_schedule();
+        lwt_yield(NULL);
         //main flow goes here for h
     }
 }
