@@ -212,6 +212,8 @@ struct _kthd_info
     lwt_t main_thread;
     struct list_head run_queue;
     struct list_head recycle_queue;
+    struct list_head wakeup_queue;
+    int pooling_flag;
 };
 
 
